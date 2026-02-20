@@ -1,0 +1,139 @@
+﻿.page {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.header {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.header p {
+  color: #52606d;
+}
+
+.grid {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  color: #102a43;
+  font-weight: 600;
+}
+
+.filters {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+
+.filterField {
+  display: grid;
+  gap: 0.25rem;
+  color: #243b53;
+  font-weight: 600;
+}
+
+.filterField select {
+  border: 1px solid #bcccdc;
+  border-radius: 8px;
+  min-height: 36px;
+  padding: 0.35rem 0.5rem;
+  font: inherit;
+  color: #102a43;
+  background: #ffffff;
+}
+
+.section {
+  border: 1px solid #bcccdc;
+  border-radius: 12px;
+  padding: 0.8rem;
+  background: #ffffff;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.section h2 {
+  margin: 0;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 0.45rem;
+  border-bottom: 1px solid #d9e2ec;
+}
+
+.actionsCell {
+  white-space: nowrap;
+}
+
+.cellInput {
+  width: 100%;
+  min-width: 120px;
+  border: 1px solid #bcccdc;
+  border-radius: 8px;
+  padding: 0.35rem 0.5rem;
+  font: inherit;
+}
+
+.primaryButton,
+.secondaryButton,
+.deleteButton {
+  border-radius: 8px;
+  padding: 0.35rem 0.55rem;
+  cursor: pointer;
+  font-weight: 600;
+  margin-right: 0.35rem;
+}
+
+.primaryButton {
+  border: 1px solid #102a43;
+  background: #102a43;
+  color: #ffffff;
+}
+
+.secondaryButton {
+  border: 1px solid #486581;
+  background: #ffffff;
+  color: #243b53;
+}
+
+.deleteButton {
+  border: 1px solid #d64545;
+  background: #ffffff;
+  color: #d64545;
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled,
+.deleteButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.empty {
+  margin: 0;
+  color: #52606d;
+}
+
+.error {
+  margin: 0;
+  color: #d64545;
+  font-weight: 600;
+}
+
+.resultFooter {
+  border-top: 1px solid #d9e2ec;
+  padding-top: 0.6rem;
+  color: #102a43;
+}

@@ -1,0 +1,9 @@
+﻿{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "types": ["jest", "node", "vite/client"],
+    "noEmit": true
+  },
+  "include": ["src", "electron", "jest.setup.ts"]
+}

@@ -1,0 +1,101 @@
+﻿.page {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.container {
+  width: 100%;
+  max-width: 680px;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.header {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.header p {
+  color: #52606d;
+}
+
+.form {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem;
+  border: 1px solid #bcccdc;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.checkboxField {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 600;
+  color: #243b53;
+}
+
+.field span {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.field input,
+.field select,
+.field textarea {
+  border: 1px solid #bcccdc;
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  font: inherit;
+}
+
+.inlineActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.option,
+.activeOption {
+  border: 1px solid #bcccdc;
+  background: #f7fafc;
+  color: #243b53;
+  border-radius: 8px;
+  padding: 0.45rem 0.7rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.activeOption {
+  background: #102a43;
+  color: #ffffff;
+  border-color: #102a43;
+}
+
+.submit {
+  border: none;
+  border-radius: 10px;
+  padding: 0.7rem 0.95rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  background: #102a43;
+  color: #f0f4f8;
+}
+
+.submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.feedback {
+  margin: 0;
+  color: #334e68;
+  font-weight: 600;
+}
