@@ -39,144 +39,154 @@ export const TransactionsTable = ({
       {transactions.length === 0 ? (
         <p className={styles.empty}>Nenhuma transacao encontrada.</p>
       ) : (
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Data</th>
-              <th>Categoria</th>
-              <th>Descricao</th>
-              <th>Valor</th>
-              <th>Custo mensal</th>
-              <th>Acoes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {transactions.map((transaction) => {
-              const isEditing = editingId === transaction.id && editingDraft !== null
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <colgroup>
+              <col className={styles.colDate} />
+              <col className={styles.colCategory} />
+              <col className={styles.colDescription} />
+              <col className={styles.colValue} />
+              <col className={styles.colMonthlyCost} />
+              <col className={styles.colActions} />
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Categoria</th>
+                <th>Descricao</th>
+                <th>Valor</th>
+                <th>Custo mensal</th>
+                <th>Acoes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {transactions.map((transaction) => {
+                const isEditing = editingId === transaction.id && editingDraft !== null
 
-              return (
-                <tr key={transaction.id}>
-                  <td>
-                    {isEditing ? (
-                      <input
-                        type="date"
-                        className={styles.cellInput}
-                        value={editingDraft.date}
-                        onChange={(event) => onEditChange('date', event.target.value)}
-                      />
-                    ) : (
-                      formatDate(transaction.date)
-                    )}
-                  </td>
-                  <td>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        className={styles.cellInput}
-                        value={editingDraft.category}
-                        onChange={(event) => onEditChange('category', event.target.value)}
-                      />
-                    ) : (
-                      transaction.category
-                    )}
-                  </td>
-                  <td>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        className={styles.cellInput}
-                        value={editingDraft.description}
-                        onChange={(event) => onEditChange('description', event.target.value)}
-                      />
-                    ) : (
-                      transaction.description
-                    )}
-                  </td>
-                  <td>
-                    {isEditing ? (
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        className={styles.cellInput}
-                        value={String(editingDraft.amount)}
-                        onChange={(event) => onEditChange('amount', event.target.value)}
-                      />
-                    ) : (
-                      formatCurrency(transaction.amount)
-                    )}
-                  </td>
-                  <td>
-                    {isEditing ? (
-                      editingDraft.type === 'saida' ? (
+                return (
+                  <tr key={transaction.id}>
+                    <td>
+                      {isEditing ? (
                         <input
-                          type="checkbox"
-                          checked={editingDraft.isMonthlyCost}
-                          onChange={(event) => onEditChange('isMonthlyCost', event.target.checked)}
+                          type="date"
+                          className={styles.cellInput}
+                          value={editingDraft.date}
+                          onChange={(event) => onEditChange('date', event.target.value)}
                         />
                       ) : (
-                        <span>-</span>
-                      )
-                    ) : transaction.type === 'saida' ? (
-                      transaction.isMonthlyCost ? 'Sim' : 'Nao'
-                    ) : (
-                      '-'
-                    )}
-                  </td>
-                  <td className={styles.actionsCell}>
-                    {isEditing ? (
-                      <div className={styles.actionsGroup}>
-                        <ButtonLoading
-                          type="button"
-                          variant="primary"
-                          className={styles.actionButton}
-                          loading={isSavingEdit}
-                          onClick={() => {
-                            void onEditSave()
-                          }}
-                        >
-                          Salvar
-                        </ButtonLoading>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          className={styles.actionButton}
-                          disabled={isSavingEdit}
-                          onClick={onEditCancel}
-                        >
-                          Cancelar
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className={styles.actionsGroup}>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          className={styles.actionButton}
-                          disabled={deletingId === transaction.id}
-                          onClick={() => onEditStart(transaction)}
-                        >
-                          Editar
-                        </Button>
-                        <ButtonLoading
-                          type="button"
-                          variant="danger"
-                          className={styles.actionButton}
-                          loading={deletingId === transaction.id}
-                          onClick={() => {
-                            void onDelete(transaction.id)
-                          }}
-                        >
-                          Apagar
-                        </ButtonLoading>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+                        formatDate(transaction.date)
+                      )}
+                    </td>
+                    <td>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          className={styles.cellInput}
+                          value={editingDraft.category}
+                          onChange={(event) => onEditChange('category', event.target.value)}
+                        />
+                      ) : (
+                        transaction.category
+                      )}
+                    </td>
+                    <td>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          className={styles.cellInput}
+                          value={editingDraft.description}
+                          onChange={(event) => onEditChange('description', event.target.value)}
+                        />
+                      ) : (
+                        transaction.description
+                      )}
+                    </td>
+                    <td>
+                      {isEditing ? (
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          className={styles.cellInput}
+                          value={String(editingDraft.amount)}
+                          onChange={(event) => onEditChange('amount', event.target.value)}
+                        />
+                      ) : (
+                        formatCurrency(transaction.amount)
+                      )}
+                    </td>
+                    <td>
+                      {isEditing ? (
+                        editingDraft.type === 'saida' ? (
+                          <input
+                            type="checkbox"
+                            checked={editingDraft.isMonthlyCost}
+                            onChange={(event) => onEditChange('isMonthlyCost', event.target.checked)}
+                          />
+                        ) : (
+                          <span>-</span>
+                        )
+                      ) : transaction.type === 'saida' ? (
+                        transaction.isMonthlyCost ? 'Sim' : 'Nao'
+                      ) : (
+                        '-'
+                      )}
+                    </td>
+                    <td className={styles.actionsCell}>
+                      {isEditing ? (
+                        <div className={styles.actionsGroup}>
+                          <ButtonLoading
+                            type="button"
+                            variant="primary"
+                            className={styles.actionButton}
+                            loading={isSavingEdit}
+                            onClick={() => {
+                              void onEditSave()
+                            }}
+                          >
+                            Salvar
+                          </ButtonLoading>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className={styles.actionButton}
+                            disabled={isSavingEdit}
+                            onClick={onEditCancel}
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className={styles.actionsGroup}>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className={styles.actionButton}
+                            disabled={deletingId === transaction.id}
+                            onClick={() => onEditStart(transaction)}
+                          >
+                            Editar
+                          </Button>
+                          <ButtonLoading
+                            type="button"
+                            variant="danger"
+                            className={styles.actionButton}
+                            loading={deletingId === transaction.id}
+                            onClick={() => {
+                              void onDelete(transaction.id)
+                            }}
+                          >
+                            Apagar
+                          </ButtonLoading>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </section>
   )

@@ -81,3 +81,13 @@
   color: var(--text-secondary);
   font-weight: var(--font-weight-semibold);
 }
+
+@media (max-width: 560px) {
+  .form {
+    padding: var(--space-3);
+  }
+
+  .inlineActions {
+    flex-direction: column;
+  }
+}

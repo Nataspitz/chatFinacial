@@ -66,8 +66,10 @@
   padding: var(--space-3);
   background: var(--card-bg);
   box-shadow: var(--shadow-sm);
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-2);
+  max-height: 420px;
 }
 
 .section h2 {
@@ -77,6 +79,14 @@
 .table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.tableWrap {
+  width: 100%;
+  overflow: auto;
+  min-height: 0;
+  flex: 1;
 }
 
 .table th,
@@ -107,7 +117,32 @@
 }
 
 .actionButton {
-  min-width: calc(var(--space-12) * 0.9);
+  width: 100px;
+  min-width: 100px;
+}
+
+.colDate {
+  width: 12%;
+}
+
+.colCategory {
+  width: 19%;
+}
+
+.colDescription {
+  width: 19%;
+}
+
+.colValue {
+  width: 11%;
+}
+
+.colMonthlyCost {
+  width: 14%;
+}
+
+.colActions {
+  width: 25%;
 }
 
 .empty {
@@ -125,4 +160,14 @@
   border-top: 1px solid var(--border-color);
   padding-top: var(--space-2);
   color: var(--text-primary);
+}
+
+@media (max-width: 900px) {
+  .table {
+    min-width: 700px;
+  }
+
+  .actionsGroup {
+    flex-wrap: wrap;
+  }
 }

@@ -7,6 +7,7 @@ Aplicacao desktop para fluxo financeiro com arquitetura modular, separando UI, r
 - Electron (main + preload)
 - React + Vite + TypeScript
 - React Router DOM
+- react-icons
 - CSS Modules
 - better-sqlite3
 - Axios
@@ -78,9 +79,32 @@ Aplicacao desktop para fluxo financeiro com arquitetura modular, separando UI, r
   - botoes de `Navbar`, `Formulario`, `Report` e navegacao do `Calendario` usam componentes UI.
 
 ## Rotas
+- `/`
+- `/login`
 - `/formulario`
 - `/report`
 - `/calendario`
+- Rotas protegidas:
+  - `/formulario`, `/report` e `/calendario` exigem sessao autenticada.
+  - sem sessao, usuario e redirecionado para `/login`.
+
+## Autenticacao (login local)
+- Contexto de autenticacao em `src/contexts/AuthContext.tsx`.
+- Sessao persistida em `localStorage` (`chatfinancial.auth`).
+- `AuthProvider` registrado em `src/contexts/AppProviders.tsx`.
+- Pagina de login em `src/pages/Login/*`.
+- `ProtectedRoute` em `src/routes/ProtectedRoute.tsx` protege as rotas internas.
+- Navbar possui acao de `Sair` (logout) e identificacao do usuario logado.
+
+## Sidebar (Navbar)
+- Sidebar modernizada com `react-icons` e visual escuro.
+- Estrutura com:
+  - bloco de marca no topo
+  - links com icones
+  - acoes de tema/logout no rodape
+- Comportamento:
+  - desktop: fixa na lateral esquerda, sem scroll interno, com todos os botoes visiveis.
+  - mobile/tablet: volta ao fluxo normal para responsividade.
 
 ## Feature ativa: Formulario
 - Campos:
@@ -112,6 +136,10 @@ Aplicacao desktop para fluxo financeiro com arquitetura modular, separando UI, r
 - Correcao de data:
   - exibicao da data no relatorio trata `YYYY-MM-DD` como data local (`new Date(year, month - 1, day)`)
   - evita deslocamento de um dia por timezone em datas salvas no formulario.
+- Ajustes visuais recentes:
+  - colunas das tabelas com largura fixa via `colgroup` para manter alinhamento entre `Entradas` e `Saidas`.
+  - coluna de acoes com botoes `Editar/Apagar` padronizados e alinhados.
+  - cards `Entradas` e `Saidas` com altura maxima e scroll interno para listas longas.
 
 ## Calendario
 - Exibe calendario mensal real (grade de 6 semanas).

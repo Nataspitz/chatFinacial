@@ -60,6 +60,11 @@
   font-weight: var(--font-weight-semibold);
 }
 
+.calendarWrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
 .calendar {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -114,4 +119,10 @@
   margin: 0;
   color: var(--danger-500);
   font-weight: var(--font-weight-semibold);
+}
+
+@media (max-width: 900px) {
+  .calendar {
+    min-width: 760px;
+  }
 }

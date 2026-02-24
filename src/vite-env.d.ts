@@ -1,8 +1,9 @@
 /// <reference types="vite/client" />
+/// <reference types="vite-plugin-pwa/client" />
 
 declare global {
   interface Window {
-    api: {
+    api?: {
       saveTransaction: (transaction: import('./types/transaction.types').Transaction) => Promise<void>
       getTransactions: () => Promise<import('./types/transaction.types').Transaction[]>
       deleteTransaction: (id: string) => Promise<void>
