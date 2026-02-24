@@ -2,6 +2,8 @@
 import type {
   FinanceDeleteRequest,
   FinanceDeleteResponse,
+  FinanceExportReportPdfRequest,
+  FinanceExportReportPdfResponse,
   FinanceGetAllResponse,
   FinanceSaveRequest,
   FinanceSaveResponse,
@@ -42,6 +44,20 @@ contextBridge.exposeInMainWorld('api', {
 
     if (response.ok === false) {
       throw new Error(response.error.message)
+    }
+  },
+  exportReportPdf: async (
+    payload: FinanceExportReportPdfRequest
+  ): Promise<{ canceled: boolean; filePath?: string }> => {
+    const response = (await ipcRenderer.invoke('finance:exportReportPdf', payload)) as FinanceExportReportPdfResponse
+
+    if (response.ok === false) {
+      throw new Error(response.error.message)
+    }
+
+    return {
+      canceled: response.canceled,
+      filePath: response.filePath
     }
   }
 })

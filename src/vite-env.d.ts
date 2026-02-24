@@ -7,6 +7,9 @@ declare global {
       getTransactions: () => Promise<import('./types/transaction.types').Transaction[]>
       deleteTransaction: (id: string) => Promise<void>
       updateTransaction: (transaction: import('./types/transaction.types').Transaction) => Promise<void>
+      exportReportPdf: (
+        payload: import('./types/report-export.types').ExportReportPdfPayload
+      ) => Promise<import('./types/report-export.types').ExportReportPdfResult>
     }
   }
 }

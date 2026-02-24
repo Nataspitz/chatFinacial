@@ -5,5 +5,5 @@
     "types": ["jest", "node", "vite/client"],
     "noEmit": true
   },
-  "include": ["src", "electron", "jest.setup.ts"]
+  "include": ["src", "electron", "__tests__", "jest.setup.ts"]
 }

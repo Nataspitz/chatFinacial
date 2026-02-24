@@ -1,9 +1,9 @@
 ﻿import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { Formulario } from './Formulario'
-import { financeService } from '../../services/finance.service'
+import { Formulario } from '../../../src/pages/Formulario/Formulario'
+import { financeService } from '../../../src/services/finance.service'
 
-jest.mock('../../services/finance.service', () => ({
+jest.mock('../../../src/services/finance.service', () => ({
   financeService: {
     saveTransaction: jest.fn()
   }
@@ -80,3 +80,5 @@ describe('Formulario', () => {
     )
   })
 })
+
+

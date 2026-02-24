@@ -1,44 +1,39 @@
-﻿.page {
+.page {
   display: grid;
-  gap: 0.85rem;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: calc(var(--space-12) * 20);
+  margin: 0 auto;
 }
 
 .header {
   display: grid;
-  gap: 0.25rem;
+  gap: var(--space-1);
 }
 
 .header p {
-  color: #52606d;
+  color: var(--text-secondary);
 }
 
 .toolbar {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.6rem;
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
 
 .monthNav {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
-.toolbar button {
-  border: 1px solid #bcccdc;
-  background: #ffffff;
-  color: #243b53;
-  border-radius: 8px;
+.monthButton {
   width: 36px;
   height: 36px;
-  display: grid;
-  place-items: center;
   padding: 0;
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: 700;
+  min-width: 36px;
 }
 
 .monthTitle {
@@ -48,44 +43,44 @@
 }
 
 .yearSelect {
-  border: 1px solid #bcccdc;
-  background: #ffffff;
-  color: #243b53;
-  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-radius: var(--radius-md);
   height: 36px;
-  padding: 0 0.6rem;
-  font-weight: 600;
+  padding: 0 var(--space-3);
+  font-weight: var(--font-weight-semibold);
 }
 
 .monthSummary {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.8rem;
-  color: #102a43;
-  font-weight: 600;
+  gap: var(--space-3);
+  color: var(--text-primary);
+  font-weight: var(--font-weight-semibold);
 }
 
 .calendar {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 0.45rem;
+  gap: var(--space-2);
 }
 
 .weekDay {
   text-align: center;
-  font-weight: 700;
-  color: #334e68;
+  font-weight: var(--font-weight-bold);
+  color: var(--text-secondary);
 }
 
 .dayCell,
 .dayCellMuted {
   min-height: 104px;
-  border: 1px solid #d9e2ec;
-  border-radius: 10px;
-  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
   display: grid;
-  gap: 0.25rem;
-  background: #ffffff;
+  gap: var(--space-1);
+  background: var(--card-bg);
 }
 
 .dayCellMuted {
@@ -93,30 +88,30 @@
 }
 
 .todayCell {
-  border-color: #0b5cab;
-  box-shadow: 0 0 0 2px rgba(11, 92, 171, 0.25);
+  border-color: var(--brand-600);
+  box-shadow: var(--shadow-sm);
 }
 
 .dayNumber {
-  font-weight: 700;
-  color: #102a43;
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
 }
 
 .entrada,
 .saida {
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
 }
 
 .entrada {
-  color: #0f766e;
+  color: var(--success-500);
 }
 
 .saida {
-  color: #b91c1c;
+  color: var(--danger-500);
 }
 
 .error {
   margin: 0;
-  color: #d64545;
-  font-weight: 600;
+  color: var(--danger-500);
+  font-weight: var(--font-weight-semibold);
 }

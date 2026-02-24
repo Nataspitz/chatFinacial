@@ -1,6 +1,12 @@
 ﻿import { useEffect, useMemo, useState } from 'react'
 import { financeService } from '../../services/finance.service'
+import type { ExportReportPdfPayload } from '../../types/report-export.types'
 import type { Transaction } from '../../types/transaction.types'
+import { PageHeader } from './components/PageHeader'
+import { ReportFilters } from './components/ReportFilters'
+import { ReportSummary } from './components/ReportSummary'
+import { ResultFooter } from './components/ResultFooter'
+import { TransactionsTable } from './components/TransactionsTable'
 import styles from './Report.module.css'
 
 const formatCurrency = (value: number): string => {
@@ -11,7 +17,14 @@ const formatCurrency = (value: number): string => {
 }
 
 const formatDate = (value: string): string => {
-  return new Intl.DateTimeFormat('pt-BR').format(new Date(value))
+  const normalized = value.match(/^\d{4}-\d{2}-\d{2}/)?.[0]
+  if (!normalized) {
+    return new Intl.DateTimeFormat('pt-BR').format(new Date(value))
+  }
+
+  const [year, month, day] = normalized.split('-').map(Number)
+  const localDate = new Date(year, month - 1, day)
+  return new Intl.DateTimeFormat('pt-BR').format(localDate)
 }
 
 const normalizeTransactionDate = (value: string): string | null => {
@@ -19,192 +32,53 @@ const normalizeTransactionDate = (value: string): string | null => {
   return match ? match[0] : null
 }
 
-const MONTH_OPTIONS = [
-  { value: 'all', label: 'Todos os meses' },
-  { value: '01', label: 'Janeiro' },
-  { value: '02', label: 'Fevereiro' },
-  { value: '03', label: 'Marco' },
-  { value: '04', label: 'Abril' },
-  { value: '05', label: 'Maio' },
-  { value: '06', label: 'Junho' },
-  { value: '07', label: 'Julho' },
-  { value: '08', label: 'Agosto' },
-  { value: '09', label: 'Setembro' },
-  { value: '10', label: 'Outubro' },
-  { value: '11', label: 'Novembro' },
-  { value: '12', label: 'Dezembro' }
-]
+const shouldIncludeMonthlyCostInPeriod = (
+  transaction: Transaction,
+  selectedYear: string,
+  selectedMonth: string,
+  selectedDay: string
+): boolean => {
+  if (transaction.type !== 'saida' || !transaction.isMonthlyCost) {
+    return false
+  }
 
-interface TransactionsTableProps {
-  title: string
-  transactions: Transaction[]
-  onDelete: (id: string) => Promise<void>
-  onEditStart: (transaction: Transaction) => void
-  onEditCancel: () => void
-  onEditChange: (field: 'date' | 'category' | 'description' | 'amount' | 'isMonthlyCost', value: string | boolean) => void
-  onEditSave: () => Promise<void>
-  deletingId: string | null
-  editingId: string | null
-  editingDraft: Transaction | null
-  isSavingEdit: boolean
+  if (selectedYear === 'all' || selectedMonth === 'all') {
+    return false
+  }
+
+  const normalizedDate = normalizeTransactionDate(transaction.date)
+  if (!normalizedDate) {
+    return false
+  }
+
+  const [year, month, day] = normalizedDate.split('-').map(Number)
+  const targetYear = Number(selectedYear)
+  const targetMonth = Number(selectedMonth)
+
+  if (!Number.isFinite(targetYear) || !Number.isFinite(targetMonth)) {
+    return false
+  }
+
+  const isAfterStartMonth = targetYear > year || (targetYear === year && targetMonth >= month)
+  const matchDay = selectedDay === 'all' || day === Number(selectedDay)
+
+  return isAfterStartMonth && matchDay
 }
 
-const TransactionsTable = ({
-  title,
-  transactions,
-  onDelete,
-  onEditStart,
-  onEditCancel,
-  onEditChange,
-  onEditSave,
-  deletingId,
-  editingId,
-  editingDraft,
-  isSavingEdit
-}: TransactionsTableProps): JSX.Element => {
-  return (
-    <section className={styles.section}>
-      <h2>{title}</h2>
-      {transactions.length === 0 ? (
-        <p className={styles.empty}>Nenhuma transacao encontrada.</p>
-      ) : (
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Data</th>
-              <th>Categoria</th>
-              <th>Descricao</th>
-              <th>Valor</th>
-              <th>Custo mensal</th>
-              <th>Acoes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {transactions.map((transaction) => {
-              const isEditing = editingId === transaction.id && editingDraft !== null
-
-              return (
-                <tr key={transaction.id}>
-                  <td>
-                    {isEditing ? (
-                      <input
-                        type="date"
-                        className={styles.cellInput}
-                        value={editingDraft.date}
-                        onChange={(event) => onEditChange('date', event.target.value)}
-                      />
-                    ) : (
-                      formatDate(transaction.date)
-                    )}
-                  </td>
-                  <td>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        className={styles.cellInput}
-                        value={editingDraft.category}
-                        onChange={(event) => onEditChange('category', event.target.value)}
-                      />
-                    ) : (
-                      transaction.category
-                    )}
-                  </td>
-                  <td>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        className={styles.cellInput}
-                        value={editingDraft.description}
-                        onChange={(event) => onEditChange('description', event.target.value)}
-                      />
-                    ) : (
-                      transaction.description
-                    )}
-                  </td>
-                  <td>
-                    {isEditing ? (
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        className={styles.cellInput}
-                        value={String(editingDraft.amount)}
-                        onChange={(event) => onEditChange('amount', event.target.value)}
-                      />
-                    ) : (
-                      formatCurrency(transaction.amount)
-                    )}
-                  </td>
-                  <td>
-                    {isEditing ? (
-                      editingDraft.type === 'saida' ? (
-                        <input
-                          type="checkbox"
-                          checked={editingDraft.isMonthlyCost}
-                          onChange={(event) => onEditChange('isMonthlyCost', event.target.checked)}
-                        />
-                      ) : (
-                        <span>-</span>
-                      )
-                    ) : transaction.type === 'saida' ? (
-                      transaction.isMonthlyCost ? 'Sim' : 'Nao'
-                    ) : (
-                      '-'
-                    )}
-                  </td>
-                  <td className={styles.actionsCell}>
-                    {isEditing ? (
-                      <>
-                        <button
-                          type="button"
-                          className={styles.primaryButton}
-                          disabled={isSavingEdit}
-                          onClick={() => {
-                            void onEditSave()
-                          }}
-                        >
-                          {isSavingEdit ? 'Salvando...' : 'Salvar'}
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.secondaryButton}
-                          disabled={isSavingEdit}
-                          onClick={onEditCancel}
-                        >
-                          Cancelar
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          className={styles.secondaryButton}
-                          disabled={deletingId === transaction.id}
-                          onClick={() => onEditStart(transaction)}
-                        >
-                          Editar
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.deleteButton}
-                          disabled={deletingId === transaction.id}
-                          onClick={() => {
-                            void onDelete(transaction.id)
-                          }}
-                        >
-                          {deletingId === transaction.id ? 'Apagando...' : 'Apagar'}
-                        </button>
-                      </>
-                    )}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      )}
-    </section>
-  )
+const MONTH_LABELS: Record<string, string> = {
+  all: 'Todos os meses',
+  '01': 'Janeiro',
+  '02': 'Fevereiro',
+  '03': 'Marco',
+  '04': 'Abril',
+  '05': 'Maio',
+  '06': 'Junho',
+  '07': 'Julho',
+  '08': 'Agosto',
+  '09': 'Setembro',
+  '10': 'Outubro',
+  '11': 'Novembro',
+  '12': 'Dezembro'
 }
 
 export const Report = (): JSX.Element => {
@@ -218,6 +92,7 @@ export const Report = (): JSX.Element => {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingDraft, setEditingDraft] = useState<Transaction | null>(null)
   const [isSavingEdit, setIsSavingEdit] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
 
   useEffect(() => {
     void (async () => {
@@ -252,7 +127,12 @@ export const Report = (): JSX.Element => {
       const matchYear = selectedYear === 'all' || year === selectedYear
       const matchMonth = selectedMonth === 'all' || month === selectedMonth
       const matchDay = selectedDay === 'all' || day === selectedDay
-      return matchYear && matchMonth && matchDay
+
+      if (matchYear && matchMonth && matchDay) {
+        return true
+      }
+
+      return shouldIncludeMonthlyCostInPeriod(item, selectedYear, selectedMonth, selectedDay)
     })
   }, [selectedDay, selectedMonth, selectedYear, transactions])
 
@@ -358,63 +238,56 @@ export const Report = (): JSX.Element => {
     }
   }
 
+  const getPeriodLabel = (): string => {
+    const yearLabel = selectedYear === 'all' ? 'Todos os anos' : selectedYear
+    const monthLabel = MONTH_LABELS[selectedMonth] ?? selectedMonth
+    const dayLabel = selectedDay === 'all' ? 'Todos os dias' : selectedDay
+    return `Ano: ${yearLabel} | Mes: ${monthLabel} | Dia: ${dayLabel}`
+  }
+
+  const handleExportReport = async (): Promise<void> => {
+    const payload: ExportReportPdfPayload = {
+      periodLabel: getPeriodLabel(),
+      entries,
+      outcomes,
+      totalEntries,
+      totalOutcomes,
+      resultBalance
+    }
+
+    setIsExporting(true)
+    setError('')
+
+    try {
+      await financeService.exportReportPdf(payload)
+    } catch {
+      setError('Nao foi possivel exportar o relatorio em PDF.')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   return (
     <section className={styles.page}>
-      <header className={styles.header}>
-        <h1>Relatorio</h1>
-        <p>Visualizacao de transacoes salvas localmente.</p>
-      </header>
+      <PageHeader onExport={() => void handleExportReport()} isExporting={isExporting} disabled={isLoading} />
 
-      <div className={styles.filters}>
-        <label className={styles.filterField}>
-          <span>Ano</span>
-          <select value={selectedYear} onChange={(event) => setSelectedYear(event.target.value)}>
-            <option value="all">Todos os anos</option>
-            {yearOptions
-              .filter((year) => year !== 'all')
-              .map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-          </select>
-        </label>
-
-        <label className={styles.filterField}>
-          <span>Mes</span>
-          <select value={selectedMonth} onChange={(event) => setSelectedMonth(event.target.value)}>
-            {MONTH_OPTIONS.map((month) => (
-              <option key={month.value} value={month.value}>
-                {month.label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className={styles.filterField}>
-          <span>Dia</span>
-          <select value={selectedDay} onChange={(event) => setSelectedDay(event.target.value)}>
-            <option value="all">Todos os dias</option>
-            {dayOptions
-              .filter((day) => day !== 'all')
-              .map((day) => (
-                <option key={day} value={day}>
-                  {day}
-                </option>
-              ))}
-          </select>
-        </label>
-      </div>
+      <ReportFilters
+        selectedYear={selectedYear}
+        selectedMonth={selectedMonth}
+        selectedDay={selectedDay}
+        yearOptions={yearOptions}
+        dayOptions={dayOptions}
+        onYearChange={setSelectedYear}
+        onMonthChange={setSelectedMonth}
+        onDayChange={setSelectedDay}
+      />
 
       {isLoading && <p>Carregando transacoes...</p>}
       {error && <p className={styles.error}>{error}</p>}
 
       {!isLoading && !error && (
         <>
-          <div className={styles.summary}>
-            <span>Soma de entradas: {formatCurrency(totalEntries)}</span>
-            <span>Soma de saidas: {formatCurrency(totalOutcomes)}</span>
-          </div>
+          <ReportSummary totalEntries={totalEntries} totalOutcomes={totalOutcomes} formatCurrency={formatCurrency} />
 
           <div className={styles.grid}>
             <TransactionsTable
@@ -429,6 +302,8 @@ export const Report = (): JSX.Element => {
               editingId={editingId}
               editingDraft={editingDraft}
               isSavingEdit={isSavingEdit}
+              formatCurrency={formatCurrency}
+              formatDate={formatDate}
             />
             <TransactionsTable
               title="Saidas"
@@ -442,12 +317,12 @@ export const Report = (): JSX.Element => {
               editingId={editingId}
               editingDraft={editingDraft}
               isSavingEdit={isSavingEdit}
+              formatCurrency={formatCurrency}
+              formatDate={formatDate}
             />
           </div>
 
-          <footer className={styles.resultFooter}>
-            <strong>Resultado: {formatCurrency(resultBalance)}</strong>
-          </footer>
+          <ResultFooter resultBalance={resultBalance} formatCurrency={formatCurrency} />
         </>
       )}
     </section>

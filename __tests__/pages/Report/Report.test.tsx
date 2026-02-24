@@ -1,25 +1,28 @@
 ﻿import userEvent from '@testing-library/user-event'
 import { render, screen, waitFor } from '@testing-library/react'
-import { Report } from './Report'
-import { financeService } from '../../services/finance.service'
+import { Report } from '../../../src/pages/Report/Report'
+import { financeService } from '../../../src/services/finance.service'
 
-jest.mock('../../services/finance.service', () => ({
+jest.mock('../../../src/services/finance.service', () => ({
   financeService: {
     getTransactions: jest.fn(),
     deleteTransaction: jest.fn(),
-    updateTransaction: jest.fn()
+    updateTransaction: jest.fn(),
+    exportReportPdf: jest.fn()
   }
 }))
 
 const mockedGetTransactions = jest.mocked(financeService.getTransactions)
 const mockedDeleteTransaction = jest.mocked(financeService.deleteTransaction)
 const mockedUpdateTransaction = jest.mocked(financeService.updateTransaction)
+const mockedExportReportPdf = jest.mocked(financeService.exportReportPdf)
 
 describe('Report', () => {
   beforeEach(() => {
     mockedGetTransactions.mockReset()
     mockedDeleteTransaction.mockReset()
     mockedUpdateTransaction.mockReset()
+    mockedExportReportPdf.mockReset()
   })
 
   it('deve carregar e separar entradas e saidas', async () => {
@@ -191,4 +194,92 @@ describe('Report', () => {
     expect(screen.getByText('Salario')).toBeInTheDocument()
     expect(screen.queryByText('Mercado')).not.toBeInTheDocument()
   })
+
+  it('deve exportar PDF com o periodo filtrado', async () => {
+    mockedGetTransactions.mockResolvedValue([
+      {
+        id: '1',
+        type: 'entrada',
+        amount: 1000,
+        category: 'Salario',
+        description: 'Pagamento',
+        date: '2026-02-20',
+        isMonthlyCost: false
+      },
+      {
+        id: '2',
+        type: 'saida',
+        amount: 200,
+        category: 'Mercado',
+        description: 'Compras',
+        date: '2026-02-20',
+        isMonthlyCost: false
+      }
+    ])
+    mockedExportReportPdf.mockResolvedValue({ canceled: false, filePath: 'C:\\tmp\\relatorio.pdf' })
+
+    render(<Report />)
+    const user = userEvent.setup()
+
+    await waitFor(() => {
+      expect(screen.getByText('Salario')).toBeInTheDocument()
+    })
+
+    await user.selectOptions(screen.getByLabelText('Ano'), '2026')
+    await user.selectOptions(screen.getByLabelText('Mes'), '02')
+    await user.selectOptions(screen.getByLabelText('Dia'), '20')
+    await user.click(screen.getByRole('button', { name: 'Exportar relatorio' }))
+
+    await waitFor(() => {
+      expect(mockedExportReportPdf).toHaveBeenCalledTimes(1)
+      expect(mockedExportReportPdf).toHaveBeenCalledWith(
+        expect.objectContaining({
+          periodLabel: expect.stringContaining('Ano: 2026'),
+          totalEntries: 1000,
+          totalOutcomes: 200,
+          resultBalance: 800
+        })
+      )
+    })
+  })
+
+  it('deve considerar saida com custo mensal em meses posteriores', async () => {
+    mockedGetTransactions.mockResolvedValue([
+      {
+        id: '1',
+        type: 'saida',
+        amount: 300,
+        category: 'Aluguel',
+        description: 'Moradia',
+        date: '2026-01-10',
+        isMonthlyCost: true
+      },
+      {
+        id: '2',
+        type: 'saida',
+        amount: 80,
+        category: 'Internet',
+        description: 'Plano',
+        date: '2026-01-10',
+        isMonthlyCost: false
+      }
+    ])
+
+    render(<Report />)
+    const user = userEvent.setup()
+
+    await waitFor(() => {
+      expect(screen.getByText('Aluguel')).toBeInTheDocument()
+      expect(screen.getByText('Internet')).toBeInTheDocument()
+    })
+
+    await user.selectOptions(screen.getByLabelText('Ano'), '2026')
+    await user.selectOptions(screen.getByLabelText('Mes'), '02')
+    await user.selectOptions(screen.getByLabelText('Dia'), '10')
+
+    expect(screen.getByText('Aluguel')).toBeInTheDocument()
+    expect(screen.queryByText('Internet')).not.toBeInTheDocument()
+  })
 })
+
+

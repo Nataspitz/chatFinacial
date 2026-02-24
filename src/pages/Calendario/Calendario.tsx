@@ -1,19 +1,12 @@
 ﻿import { type ChangeEvent, useEffect, useMemo, useState } from 'react'
 import { financeService } from '../../services/finance.service'
 import type { Transaction } from '../../types/transaction.types'
+import { CalendarGrid } from './components/CalendarGrid'
+import { CalendarToolbar } from './components/CalendarToolbar'
+import { MonthSummary } from './components/MonthSummary'
+import { PageHeader } from './components/PageHeader'
 import styles from './Calendario.module.css'
-
-interface DayTotals {
-  entrada: number
-  saida: number
-}
-
-interface CalendarCell {
-  key: string
-  date: Date
-  isCurrentMonth: boolean
-  totals: DayTotals
-}
+import type { CalendarCell, DayTotals } from './types'
 
 const WEEK_DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab']
 
@@ -196,73 +189,23 @@ export const Calendario = (): JSX.Element => {
 
   return (
     <section className={styles.page}>
-      <header className={styles.header}>
-        <h1>Calendario Financeiro</h1>
-        <p>Entradas e saídas somadas por dia.</p>
-      </header>
-
-      <div className={styles.toolbar}>
-        <div className={styles.monthNav}>
-          <button type="button" onClick={goToPreviousMonth} aria-label="Mês anterior">
-            {'<'}
-          </button>
-          <strong className={styles.monthTitle}>{formatMonthTitle(currentMonth)}</strong>
-          <button type="button" onClick={goToNextMonth} aria-label="Próximo mês">
-            {'>'}
-          </button>
-        </div>
-        <select
-          className={styles.yearSelect}
-          aria-label="Ano"
-          value={currentMonth.getFullYear()}
-          onChange={onYearChange}
-        >
-          {availableYears.map((year) => (
-            <option key={year} value={year}>
-              {year}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className={styles.monthSummary}>
-        <span>Entradas do mês: {formatCurrency(monthTotalEntrada)}</span>
-        <span>Saídas do mês: {formatCurrency(monthTotalSaida)}</span>
-      </div>
+      <PageHeader />
+      <CalendarToolbar
+        currentMonth={currentMonth}
+        availableYears={availableYears}
+        onPreviousMonth={goToPreviousMonth}
+        onNextMonth={goToNextMonth}
+        onYearChange={onYearChange}
+        formatMonthTitle={formatMonthTitle}
+      />
+      <MonthSummary totalEntrada={monthTotalEntrada} totalSaida={monthTotalSaida} formatCurrency={formatCurrency} />
 
       {isLoading && <p>Carregando calendário...</p>}
       {error && <p className={styles.error}>{error}</p>}
 
       {!isLoading && !error && (
-        <div className={styles.calendar}>
-          {WEEK_DAYS.map((day) => (
-            <div key={day} className={styles.weekDay}>
-              {day}
-            </div>
-          ))}
-
-          {cells.map((cell) => (
-            <article
-              key={cell.key}
-              data-date={cell.key}
-              className={[
-                cell.isCurrentMonth ? styles.dayCell : styles.dayCellMuted,
-                cell.key === todayKey ? styles.todayCell : ''
-              ]
-                .filter(Boolean)
-                .join(' ')}
-            >
-              <span className={styles.dayNumber}>{cell.date.getDate()}</span>
-              {cell.totals.entrada > 0 && (
-                <span className={styles.entrada}>Entradas: {formatCurrency(cell.totals.entrada)}</span>
-              )}
-              {cell.totals.saida > 0 && <span className={styles.saida}>Saídas: {formatCurrency(cell.totals.saida)}</span>}
-            </article>
-          ))}
-        </div>
+        <CalendarGrid cells={cells} weekDays={WEEK_DAYS} todayKey={todayKey} formatCurrency={formatCurrency} />
       )}
     </section>
   )
 }
-
-

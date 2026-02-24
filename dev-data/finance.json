@@ -1,0 +1,58 @@
+{
+  "transactions": [
+    {
+      "id": "78061c01-42c2-441f-b995-cd615f3f2205",
+      "type": "entrada",
+      "amount": 1719.16,
+      "date": "2026-02-15",
+      "category": "Entradas Airbnb",
+      "description": "Entrada de carnaval",
+      "isMonthlyCost": false
+    },
+    {
+      "id": "421fee09-11e9-4906-88c8-7b6099461976",
+      "type": "saida",
+      "amount": 400,
+      "date": "2026-02-05",
+      "category": "Empréstimo",
+      "description": "Emprétimo inicial",
+      "isMonthlyCost": true
+    },
+    {
+      "id": "64153f22-381b-4064-9728-66286c564e35",
+      "type": "entrada",
+      "amount": 400,
+      "date": "2026-02-09",
+      "category": "Hospedagem direta",
+      "description": "Primeira parte",
+      "isMonthlyCost": false
+    },
+    {
+      "id": "5d5067fe-9a70-4a4c-8e83-2d9d65e79e1d",
+      "type": "entrada",
+      "amount": 400,
+      "date": "2026-02-23",
+      "category": "Hospedagem direta",
+      "description": "Segunda parte",
+      "isMonthlyCost": false
+    },
+    {
+      "id": "d97727ab-9451-4d15-a98d-4e0b2d1c244c",
+      "type": "saida",
+      "amount": 110,
+      "date": "2026-02-10",
+      "category": "Parcela de tntita",
+      "description": "parcela de tinta",
+      "isMonthlyCost": true
+    },
+    {
+      "id": "2b90f70a-7c22-4283-b8b0-095a1a160b3f",
+      "type": "saida",
+      "amount": 180,
+      "date": "2026-02-23",
+      "category": "INternet",
+      "description": "Mensalidade",
+      "isMonthlyCost": true
+    }
+  ]
+}

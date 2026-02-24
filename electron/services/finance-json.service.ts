@@ -1,11 +1,16 @@
-﻿import { randomUUID } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
 import type { Transaction } from '../types/transaction.types'
 
 interface FinanceFileData {
   transactions: Transaction[]
 }
+
+const FINANCE_DIR_NAME = 'chatfinacial'
+const FINANCE_DB_FILE_NAME = 'finance.db'
+const FINANCE_LEGACY_FILE_NAME = 'finance.json'
 
 const isTransactionType = (value: unknown): value is 'entrada' | 'saida' => {
   return value === 'entrada' || value === 'saida'
@@ -31,7 +36,7 @@ const sanitizeTransaction = (transaction: Transaction): Transaction => {
   }
 }
 
-const readFileData = async (filePath: string): Promise<FinanceFileData> => {
+const readLegacyFileData = async (filePath: string): Promise<FinanceFileData> => {
   try {
     const fileContent = await fs.readFile(filePath, 'utf-8')
     const parsed = JSON.parse(fileContent) as Partial<FinanceFileData>
@@ -46,56 +51,194 @@ const readFileData = async (filePath: string): Promise<FinanceFileData> => {
   }
 }
 
-const writeFileData = async (filePath: string, data: FinanceFileData): Promise<void> => {
-  await fs.mkdir(path.dirname(filePath), { recursive: true })
-  await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8')
+export const getFinanceDirectoryPath = (desktopPath: string): string => {
+  return path.join(desktopPath, FINANCE_DIR_NAME)
 }
 
-interface FinancePathOptions {
-  isPackaged?: boolean
-  projectRoot?: string
+export const getFinanceDbPath = (desktopPath: string): string => {
+  return path.join(getFinanceDirectoryPath(desktopPath), FINANCE_DB_FILE_NAME)
 }
 
-export const getFinanceFilePath = (userDataPath: string, options?: FinancePathOptions): string => {
-  if (options?.isPackaged === false) {
-    const projectRoot = options.projectRoot ?? process.cwd()
-    return path.join(projectRoot, 'dev-data', 'finance.json')
+export const getFinanceReportsDirectoryPath = (desktopPath: string): string => {
+  return path.join(getFinanceDirectoryPath(desktopPath), 'reports')
+}
+
+const getLegacyJsonPathFromDbPath = (dbPath: string): string => {
+  return path.join(path.dirname(dbPath), FINANCE_LEGACY_FILE_NAME)
+}
+
+const ensureDatabase = async (dbPath: string): Promise<DatabaseSync> => {
+  await fs.mkdir(path.dirname(dbPath), { recursive: true })
+
+  const db = new DatabaseSync(dbPath)
+  db.exec('PRAGMA journal_mode = WAL;')
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS transactions (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL CHECK(type IN ('entrada', 'saida')),
+      category TEXT NOT NULL,
+      amount REAL NOT NULL,
+      description TEXT NOT NULL,
+      date TEXT NOT NULL,
+      is_monthly_cost INTEGER NOT NULL DEFAULT 0
+    );
+  `)
+
+  return db
+}
+
+const migrateLegacyJsonIfNeeded = async (db: DatabaseSync, dbPath: string): Promise<void> => {
+  const countResult = db.prepare('SELECT COUNT(*) as total FROM transactions').get() as { total: number }
+  if (countResult.total > 0) {
+    return
   }
 
-  return path.join(userDataPath, 'finance.json')
-}
-
-export const saveTransactionToJson = async (filePath: string, transaction: Transaction): Promise<void> => {
-  const data = await readFileData(filePath)
-  const safeTransaction = sanitizeTransaction(transaction)
-
-  data.transactions.push(safeTransaction)
-  await writeFileData(filePath, data)
-}
-
-export const getAllTransactionsFromJson = async (filePath: string): Promise<Transaction[]> => {
-  const data = await readFileData(filePath)
-  return data.transactions.map((item) => ({
-    ...item,
-    isMonthlyCost: item.type === 'saida' ? Boolean(item.isMonthlyCost) : false
-  }))
-}
-
-export const deleteTransactionFromJson = async (filePath: string, id: string): Promise<void> => {
-  const data = await readFileData(filePath)
-  data.transactions = data.transactions.filter((item) => item.id !== id)
-  await writeFileData(filePath, data)
-}
-
-export const updateTransactionInJson = async (filePath: string, transaction: Transaction): Promise<void> => {
-  const data = await readFileData(filePath)
-  const safeTransaction = sanitizeTransaction(transaction)
-  const index = data.transactions.findIndex((item) => item.id === safeTransaction.id)
-
-  if (index === -1) {
-    throw new Error('Transacao nao encontrada para edicao.')
+  const legacyFilePath = getLegacyJsonPathFromDbPath(dbPath)
+  const legacyData = await readLegacyFileData(legacyFilePath)
+  if (legacyData.transactions.length === 0) {
+    return
   }
 
-  data.transactions[index] = safeTransaction
-  await writeFileData(filePath, data)
+  const insertStatement = db.prepare(`
+    INSERT OR REPLACE INTO transactions (
+      id,
+      type,
+      category,
+      amount,
+      description,
+      date,
+      is_monthly_cost
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+  `)
+
+  const safeTransactions = legacyData.transactions.map((transaction) => sanitizeTransaction(transaction))
+  db.exec('BEGIN TRANSACTION;')
+  try {
+    for (const transaction of safeTransactions) {
+      insertStatement.run(
+        transaction.id,
+        transaction.type,
+        transaction.category,
+        transaction.amount,
+        transaction.description,
+        transaction.date,
+        transaction.type === 'saida' && transaction.isMonthlyCost ? 1 : 0
+      )
+    }
+    db.exec('COMMIT;')
+  } catch (error) {
+    db.exec('ROLLBACK;')
+    throw error
+  }
+}
+
+export const saveTransactionToDb = async (dbPath: string, transaction: Transaction): Promise<void> => {
+  const db = await ensureDatabase(dbPath)
+  try {
+    await migrateLegacyJsonIfNeeded(db, dbPath)
+    const safeTransaction = sanitizeTransaction(transaction)
+
+    db.prepare(
+      `
+      INSERT OR REPLACE INTO transactions (
+        id,
+        type,
+        category,
+        amount,
+        description,
+        date,
+        is_monthly_cost
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `
+    ).run(
+      safeTransaction.id,
+      safeTransaction.type,
+      safeTransaction.category,
+      safeTransaction.amount,
+      safeTransaction.description,
+      safeTransaction.date,
+      safeTransaction.type === 'saida' && safeTransaction.isMonthlyCost ? 1 : 0
+    )
+  } finally {
+    db.close()
+  }
+}
+
+export const getAllTransactionsFromDb = async (dbPath: string): Promise<Transaction[]> => {
+  const db = await ensureDatabase(dbPath)
+  try {
+    await migrateLegacyJsonIfNeeded(db, dbPath)
+
+    const rows = db
+      .prepare(
+        `
+        SELECT id, type, category, amount, description, date, is_monthly_cost
+        FROM transactions
+        ORDER BY rowid ASC
+      `
+      )
+      .all() as Array<{
+      id: string
+      type: Transaction['type']
+      category: string
+      amount: number
+      description: string
+      date: string
+      is_monthly_cost: number
+    }>
+
+    return rows.map((row) => ({
+      id: row.id,
+      type: row.type,
+      category: row.category,
+      amount: row.amount,
+      description: row.description,
+      date: row.date,
+      isMonthlyCost: row.type === 'saida' ? Boolean(row.is_monthly_cost) : false
+    }))
+  } finally {
+    db.close()
+  }
+}
+
+export const deleteTransactionFromDb = async (dbPath: string, id: string): Promise<void> => {
+  const db = await ensureDatabase(dbPath)
+  try {
+    await migrateLegacyJsonIfNeeded(db, dbPath)
+    db.prepare('DELETE FROM transactions WHERE id = ?').run(id)
+  } finally {
+    db.close()
+  }
+}
+
+export const updateTransactionInDb = async (dbPath: string, transaction: Transaction): Promise<void> => {
+  const db = await ensureDatabase(dbPath)
+  try {
+    await migrateLegacyJsonIfNeeded(db, dbPath)
+    const safeTransaction = sanitizeTransaction(transaction)
+
+    const result = db
+      .prepare(
+        `
+        UPDATE transactions
+        SET type = ?, category = ?, amount = ?, description = ?, date = ?, is_monthly_cost = ?
+        WHERE id = ?
+      `
+      )
+      .run(
+        safeTransaction.type,
+        safeTransaction.category,
+        safeTransaction.amount,
+        safeTransaction.description,
+        safeTransaction.date,
+        safeTransaction.type === 'saida' && safeTransaction.isMonthlyCost ? 1 : 0,
+        safeTransaction.id
+      )
+
+    if (result.changes === 0) {
+      throw new Error('Transacao nao encontrada para edicao.')
+    }
+  } finally {
+    db.close()
+  }
 }

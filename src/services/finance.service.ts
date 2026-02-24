@@ -1,10 +1,12 @@
-﻿import type { Transaction } from '../types/transaction.types'
+﻿import type { ExportReportPdfPayload, ExportReportPdfResult } from '../types/report-export.types'
+import type { Transaction } from '../types/transaction.types'
 
 interface FinanceService {
   saveTransaction: (transaction: Transaction) => Promise<void>
   getTransactions: () => Promise<Transaction[]>
   deleteTransaction: (id: string) => Promise<void>
   updateTransaction: (transaction: Transaction) => Promise<void>
+  exportReportPdf: (payload: ExportReportPdfPayload) => Promise<ExportReportPdfResult>
 }
 
 export const financeService: FinanceService = {
@@ -35,5 +37,12 @@ export const financeService: FinanceService = {
     }
 
     await window.api.updateTransaction(transaction)
+  },
+  exportReportPdf: async (payload: ExportReportPdfPayload): Promise<ExportReportPdfResult> => {
+    if (!window.api?.exportReportPdf) {
+      throw new Error('Canal IPC de exportacao indisponivel.')
+    }
+
+    return window.api.exportReportPdf(payload)
   }
 }

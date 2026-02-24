@@ -1,25 +1,83 @@
 .navbar {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #d9e2ec;
-  background-color: #f7fafc;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-4);
+  width: calc(var(--space-12) * 3);
+  min-height: 100vh;
+  padding: var(--space-4);
+  border-right: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.links {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-2);
 }
 
 .link {
+  display: block;
   text-decoration: none;
-  color: #1f2933;
-  font-weight: 600;
-  padding: 0.4rem 0.75rem;
-  border-radius: 8px;
+  color: var(--button-secondary-text);
+  font-weight: var(--font-weight-semibold);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+[data-theme='light'] .link {
+  background: linear-gradient(135deg, var(--brand-200), var(--brand-100));
+}
+
+[data-theme='dark'] .link {
+  background: linear-gradient(135deg, var(--brand-800), var(--brand-700));
+  color: var(--button-primary-text);
+  border-color: var(--brand-600);
 }
 
 .link:hover {
-  background-color: #e4ebf2;
+  filter: brightness(1.05);
 }
 
 .active {
-  background-color: #1f2933;
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--brand-600), var(--brand-500));
+  color: var(--button-primary-text);
+  border-color: var(--brand-600);
+  box-shadow: var(--shadow-md);
+}
+
+[data-theme='dark'] .active {
+  background: linear-gradient(135deg, var(--brand-500), var(--brand-400));
+}
+
+.themeToggle {
+  width: 100%;
+  margin-top: auto;
+}
+
+@media (max-width: 900px) {
+  .navbar {
+    width: auto;
+    min-height: auto;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .links {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .themeToggle {
+    width: auto;
+    margin-top: 0;
+    min-width: calc(var(--space-12) * 2);
+  }
 }

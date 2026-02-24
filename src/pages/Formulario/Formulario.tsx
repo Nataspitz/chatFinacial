@@ -1,6 +1,14 @@
 ﻿import { useState, type FormEvent } from 'react'
 import { financeService } from '../../services/finance.service'
 import type { Transaction, TransactionType } from '../../types/transaction.types'
+import { AmountField } from './components/AmountField'
+import { CategoryField } from './components/CategoryField'
+import { DateField } from './components/DateField'
+import { DescriptionField } from './components/DescriptionField'
+import { MonthlyCostField } from './components/MonthlyCostField'
+import { PageHeader } from './components/PageHeader'
+import { SubmitAction } from './components/SubmitAction'
+import { TransactionTypeField } from './components/TransactionTypeField'
 import styles from './Formulario.module.css'
 
 type DateMode = 'today' | 'manual'
@@ -104,100 +112,37 @@ export const Formulario = (): JSX.Element => {
   return (
     <section className={styles.page}>
       <div className={styles.container}>
-        <header className={styles.header}>
-          <h1>Cadastro de Transacao</h1>
-          <p>Formulario simples para registrar entrada ou saida.</p>
-        </header>
+        <PageHeader />
 
         <form className={styles.form} onSubmit={handleSubmit}>
-          <label className={styles.field}>
-            <span>Tipo</span>
-            <select value={form.type} onChange={(event) => handleTypeChange(event.target.value as TransactionType)}>
-              <option value="entrada">Entrada</option>
-              <option value="saida">Saida</option>
-            </select>
-          </label>
+          <TransactionTypeField value={form.type} onChange={handleTypeChange} />
 
           {form.type === 'saida' && (
-            <label className={styles.checkboxField}>
-              <input
-                type="checkbox"
-                checked={form.isMonthlyCost}
-                onChange={(event) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    isMonthlyCost: event.target.checked
-                  }))
-                }
-              />
-              <span>Marcar como custo mensal</span>
-            </label>
+            <MonthlyCostField
+              checked={form.isMonthlyCost}
+              onChange={(checked) =>
+                setForm((prev) => ({
+                  ...prev,
+                  isMonthlyCost: checked
+                }))
+              }
+            />
           )}
 
-          <label className={styles.field}>
-            <span>Valor</span>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={form.amount}
-              onChange={(event) => handleChange('amount', event.target.value)}
-              placeholder="0.00"
-            />
-          </label>
+          <AmountField value={form.amount} onChange={(value) => handleChange('amount', value)} />
 
-          <div className={styles.field}>
-            <span>Data</span>
-            <div className={styles.inlineActions}>
-              <button
-                type="button"
-                className={dateMode === 'today' ? styles.activeOption : styles.option}
-                onClick={() => setDateMode('today')}
-              >
-                Hoje
-              </button>
-              <button
-                type="button"
-                className={dateMode === 'manual' ? styles.activeOption : styles.option}
-                onClick={() => setDateMode('manual')}
-              >
-                Outra data
-              </button>
-            </div>
-            {dateMode === 'today' ? (
-              <small>Data usada: {getTodayDate()} (dispositivo)</small>
-            ) : (
-              <input
-                type="date"
-                value={form.manualDate}
-                onChange={(event) => handleChange('manualDate', event.target.value)}
-              />
-            )}
-          </div>
+          <DateField
+            dateMode={dateMode}
+            manualDate={form.manualDate}
+            todayDate={getTodayDate()}
+            onModeChange={setDateMode}
+            onManualDateChange={(value) => handleChange('manualDate', value)}
+          />
 
-          <label className={styles.field}>
-            <span>Categoria</span>
-            <input
-              type="text"
-              value={form.category}
-              onChange={(event) => handleChange('category', event.target.value)}
-              placeholder="Ex: Alimentacao"
-            />
-          </label>
+          <CategoryField value={form.category} onChange={(value) => handleChange('category', value)} />
+          <DescriptionField value={form.description} onChange={(value) => handleChange('description', value)} />
 
-          <label className={styles.field}>
-            <span>Descricao</span>
-            <textarea
-              value={form.description}
-              onChange={(event) => handleChange('description', event.target.value)}
-              rows={4}
-              placeholder="Descreva a transacao"
-            />
-          </label>
-
-          <button className={styles.submit} type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Salvando...' : 'Salvar transacao'}
-          </button>
+          <SubmitAction isSubmitting={isSubmitting} />
 
           {feedback && <p className={styles.feedback}>{feedback}</p>}
         </form>

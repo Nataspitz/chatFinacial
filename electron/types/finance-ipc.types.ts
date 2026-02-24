@@ -44,3 +44,20 @@ export interface FinanceUpdateSuccessResponse {
 }
 
 export type FinanceUpdateResponse = FinanceUpdateSuccessResponse | FinanceErrorResponse
+
+export interface FinanceExportReportPdfRequest {
+  periodLabel: string
+  entries: Transaction[]
+  outcomes: Transaction[]
+  totalEntries: number
+  totalOutcomes: number
+  resultBalance: number
+}
+
+export interface FinanceExportReportPdfSuccessResponse {
+  ok: true
+  canceled: boolean
+  filePath?: string
+}
+
+export type FinanceExportReportPdfResponse = FinanceExportReportPdfSuccessResponse | FinanceErrorResponse

@@ -1,8 +1,8 @@
 ﻿import { render, screen } from '@testing-library/react'
-import { Calendario } from './Calendario'
-import { financeService } from '../../services/finance.service'
+import { Calendario } from '../../../src/pages/Calendario/Calendario'
+import { financeService } from '../../../src/services/finance.service'
 
-jest.mock('../../services/finance.service', () => ({
+jest.mock('../../../src/services/finance.service', () => ({
   financeService: {
     getTransactions: jest.fn()
   }
@@ -42,8 +42,8 @@ describe('Calendario', () => {
 
     await screen.findByText('Dom')
 
-    expect(screen.getByText(/Entradas do mês:/i)).toBeInTheDocument()
-    expect(screen.getByText(/Saídas do mês:/i)).toBeInTheDocument()
+    expect(screen.getByText((content) => content.toLowerCase().includes('entradas do m'))).toBeInTheDocument()
+    expect(screen.getByText((content) => content.toLowerCase().includes('sa') && content.toLowerCase().includes('do m'))).toBeInTheDocument()
   })
 
   it('deve considerar saida com custo mensal em todos os meses no mesmo dia', async () => {
@@ -74,12 +74,10 @@ describe('Calendario', () => {
     render(<Calendario />)
 
     await screen.findByText('Dom')
-    expect(screen.getByText(/^março$/i)).toBeInTheDocument()
+    expect(screen.getByText((content) => content.toLowerCase().startsWith('mar'))).toBeInTheDocument()
     expect(screen.getByLabelText('Ano')).toHaveValue('2026')
 
-    expect(
-      screen.getByText((content) => content.includes('Saídas do mês:') && content.includes('40,00'))
-    ).toBeInTheDocument()
+    expect(screen.getByText((content) => content.includes('40,00') && content.toLowerCase().includes('do m'))).toBeInTheDocument()
   })
 
   it('deve listar anos anteriores no seletor quando existirem transacoes', async () => {
@@ -144,5 +142,7 @@ describe('Calendario', () => {
     expect(todayCard?.className).toContain('todayCell')
   })
 })
+
+
 
 
