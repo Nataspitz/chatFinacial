@@ -1,4 +1,5 @@
 import styles from '../Report.module.css'
+import { SelectField } from '../../../components/molecules/SelectField/SelectField'
 
 const MONTH_OPTIONS = [
   { value: 'all', label: 'Todos os meses' },
@@ -39,44 +40,35 @@ export const ReportFilters = ({
 }: ReportFiltersProps): JSX.Element => {
   return (
     <div className={styles.filters}>
-      <label className={styles.filterField}>
-        <span>Ano</span>
-        <select value={selectedYear} onChange={(event) => onYearChange(event.target.value)}>
-          <option value="all">Todos os anos</option>
-          {yearOptions
-            .filter((year) => year !== 'all')
-            .map((year) => (
-              <option key={year} value={year}>
-                {year}
-              </option>
-            ))}
-        </select>
-      </label>
-
-      <label className={styles.filterField}>
-        <span>Mes</span>
-        <select value={selectedMonth} onChange={(event) => onMonthChange(event.target.value)}>
-          {MONTH_OPTIONS.map((month) => (
-            <option key={month.value} value={month.value}>
-              {month.label}
+      <SelectField label="Ano" value={selectedYear} onChange={(event) => onYearChange(event.target.value)}>
+        <option value="all">Todos os anos</option>
+        {yearOptions
+          .filter((year) => year !== 'all')
+          .map((year) => (
+            <option key={year} value={year}>
+              {year}
             </option>
           ))}
-        </select>
-      </label>
+      </SelectField>
 
-      <label className={styles.filterField}>
-        <span>Dia</span>
-        <select value={selectedDay} onChange={(event) => onDayChange(event.target.value)}>
-          <option value="all">Todos os dias</option>
-          {dayOptions
-            .filter((day) => day !== 'all')
-            .map((day) => (
-              <option key={day} value={day}>
-                {day}
-              </option>
-            ))}
-        </select>
-      </label>
+      <SelectField label="Mes" value={selectedMonth} onChange={(event) => onMonthChange(event.target.value)}>
+        {MONTH_OPTIONS.map((month) => (
+          <option key={month.value} value={month.value}>
+            {month.label}
+          </option>
+        ))}
+      </SelectField>
+
+      <SelectField label="Dia" value={selectedDay} onChange={(event) => onDayChange(event.target.value)}>
+        <option value="all">Todos os dias</option>
+        {dayOptions
+          .filter((day) => day !== 'all')
+          .map((day) => (
+            <option key={day} value={day}>
+              {day}
+            </option>
+          ))}
+      </SelectField>
     </div>
   )
 }

@@ -1,4 +1,5 @@
 import styles from '../Formulario.module.css'
+import { FormField } from '../../../components/molecules/FormField/FormField'
 
 interface CategoryFieldProps {
   value: string
@@ -7,14 +8,13 @@ interface CategoryFieldProps {
 
 export const CategoryField = ({ value, onChange }: CategoryFieldProps): JSX.Element => {
   return (
-    <label className={styles.field}>
-      <span>Categoria</span>
+    <FormField label="Categoria" className={styles.field}>
       <input
         type="text"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder="Ex: Alimentacao"
       />
-    </label>
+    </FormField>
   )
 }

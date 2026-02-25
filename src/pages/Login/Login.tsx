@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { Button, Input } from '../../components/ui'
+import { Button, ButtonLoading, Input } from '../../components/ui'
 import { useAuth } from '../../contexts/AuthContext'
+import { LoadingState } from '../../components/organisms/LoadingState/LoadingState'
 import styles from './Login.module.css'
 
 interface LocationState {
@@ -11,28 +12,49 @@ interface LocationState {
 }
 
 export const Login = (): JSX.Element => {
-  const { isAuthenticated, login } = useAuth()
+  const { isAuthenticated, loading, signIn, signUp } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const locationState = location.state as LocationState | null
-  const redirectPath = locationState?.from?.pathname ?? '/formulario'
-  const [userName, setUserName] = useState('')
+  const redirectPath = locationState?.from?.pathname ?? '/dashboard'
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin')
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  if (isAuthenticated) {
-    return <Navigate to="/formulario" replace />
+  if (loading) {
+    return <LoadingState label="Carregando sessao..." centered />
   }
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>): void => {
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault()
-    if (!userName.trim() || !password.trim()) {
-      setError('Preencha usuario e senha para continuar.')
+
+    if (!email.trim() || !password.trim()) {
+      setError('Preencha email e senha para continuar.')
       return
     }
 
-    login(userName)
-    navigate(redirectPath, { replace: true })
+    setIsSubmitting(true)
+    setError(null)
+
+    try {
+      if (authMode === 'signup') {
+        await signUp(email.trim(), password)
+      } else {
+        await signIn(email.trim(), password)
+      }
+
+      navigate(redirectPath, { replace: true })
+    } catch (submissionError) {
+      setError(submissionError instanceof Error ? submissionError.message : 'Falha na autenticacao.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -40,19 +62,22 @@ export const Login = (): JSX.Element => {
       <div className={styles.card}>
         <header>
           <h1 className={styles.title}>Entrar</h1>
-          <p className={styles.subtitle}>Acesse o painel financeiro com sua conta.</p>
+          <p className={styles.subtitle}>
+            {authMode === 'signin' ? 'Acesse sua conta para continuar.' : 'Crie sua conta para comecar.'}
+          </p>
         </header>
         <form className={styles.form} onSubmit={handleSubmit}>
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="login-user">
-              Usuario
+            <label className={styles.label} htmlFor="login-email">
+              Email
             </label>
             <Input
-              id="login-user"
-              autoComplete="username"
-              placeholder="Seu usuario"
-              value={userName}
-              onChange={(event) => setUserName(event.target.value)}
+              id="login-email"
+              type="email"
+              autoComplete="email"
+              placeholder="seu@email.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
             />
           </div>
           <div className={styles.field}>
@@ -69,8 +94,17 @@ export const Login = (): JSX.Element => {
             />
           </div>
           {error ? <p className={styles.error}>{error}</p> : null}
-          <Button type="submit" fullWidth>
-            Entrar
+          <ButtonLoading type="submit" fullWidth loading={isSubmitting}>
+            {authMode === 'signin' ? 'Entrar' : 'Criar conta'}
+          </ButtonLoading>
+          <Button
+            type="button"
+            variant="ghost"
+            fullWidth
+            disabled={isSubmitting}
+            onClick={() => setAuthMode((prev) => (prev === 'signin' ? 'signup' : 'signin'))}
+          >
+            {authMode === 'signin' ? 'Criar nova conta' : 'Ja tenho conta'}
           </Button>
         </form>
       </div>

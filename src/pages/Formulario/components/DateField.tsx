@@ -1,4 +1,5 @@
 import { Button } from '../../../components/ui'
+import { FormField } from '../../../components/molecules/FormField/FormField'
 import styles from '../Formulario.module.css'
 
 type DateMode = 'today' | 'manual'
@@ -19,8 +20,11 @@ export const DateField = ({
   onManualDateChange
 }: DateFieldProps): JSX.Element => {
   return (
-    <div className={styles.field}>
-      <span>Data</span>
+    <FormField
+      label="Data"
+      className={styles.field}
+      helperText={dateMode === 'today' ? `Data usada: ${todayDate} (dispositivo)` : undefined}
+    >
       <div className={styles.inlineActions}>
         <Button
           type="button"
@@ -39,11 +43,9 @@ export const DateField = ({
           Outra data
         </Button>
       </div>
-      {dateMode === 'today' ? (
-        <small>Data usada: {todayDate} (dispositivo)</small>
-      ) : (
+      {dateMode === 'manual' ? (
         <input type="date" value={manualDate} onChange={(event) => onManualDateChange(event.target.value)} />
-      )}
-    </div>
+      ) : null}
+    </FormField>
   )
 }

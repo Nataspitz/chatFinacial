@@ -1,4 +1,5 @@
 import styles from '../Formulario.module.css'
+import { FormField } from '../../../components/molecules/FormField/FormField'
 
 interface DescriptionFieldProps {
   value: string
@@ -7,14 +8,13 @@ interface DescriptionFieldProps {
 
 export const DescriptionField = ({ value, onChange }: DescriptionFieldProps): JSX.Element => {
   return (
-    <label className={styles.field}>
-      <span>Descricao</span>
+    <FormField label="Descricao" className={styles.field}>
       <textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
         rows={4}
         placeholder="Descreva a transacao"
       />
-    </label>
+    </FormField>
   )
 }

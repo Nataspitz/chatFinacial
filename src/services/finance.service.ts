@@ -1,5 +1,6 @@
 import type { ExportReportPdfPayload, ExportReportPdfResult } from '../types/report-export.types'
 import type { Transaction } from '../types/transaction.types'
+import { supabase } from '../lib/supabase'
 
 interface FinanceService {
   saveTransaction: (transaction: Transaction) => Promise<void>
@@ -9,86 +10,105 @@ interface FinanceService {
   exportReportPdf: (payload: ExportReportPdfPayload) => Promise<ExportReportPdfResult>
 }
 
-const WEB_STORAGE_KEY = 'chatfinacial:transactions'
-
-const readWebTransactions = (): Transaction[] => {
-  const raw = window.localStorage.getItem(WEB_STORAGE_KEY)
-
-  if (!raw) {
-    return []
-  }
-
-  try {
-    const parsed = JSON.parse(raw) as unknown
-
-    if (!Array.isArray(parsed)) {
-      return []
-    }
-
-    return parsed.filter((item): item is Transaction => {
-      const candidate = item as Partial<Transaction>
-      return (
-        typeof candidate.id === 'string' &&
-        (candidate.type === 'entrada' || candidate.type === 'saida') &&
-        typeof candidate.category === 'string' &&
-        typeof candidate.amount === 'number' &&
-        Number.isFinite(candidate.amount) &&
-        typeof candidate.description === 'string' &&
-        typeof candidate.date === 'string' &&
-        typeof candidate.isMonthlyCost === 'boolean'
-      )
-    })
-  } catch {
-    return []
-  }
+interface TransactionRow {
+  id: string
+  user_id: string
+  type: Transaction['type']
+  category: string
+  amount: number
+  description: string
+  date: string
+  is_monthly_cost: boolean
 }
 
-const writeWebTransactions = (transactions: Transaction[]): void => {
-  window.localStorage.setItem(WEB_STORAGE_KEY, JSON.stringify(transactions))
+const toTransaction = (row: TransactionRow): Transaction => ({
+  id: row.id,
+  type: row.type,
+  category: row.category,
+  amount: Number(row.amount),
+  description: row.description,
+  date: row.date,
+  isMonthlyCost: Boolean(row.is_monthly_cost)
+})
+
+const normalizeDateValue = (value: string): string => {
+  const normalized = value.match(/^\d{4}-\d{2}-\d{2}/)?.[0]
+  return normalized ?? value
+}
+
+const getAuthenticatedUserId = async (): Promise<string> => {
+  const { data, error } = await supabase.auth.getUser()
+  if (error) {
+    throw error
+  }
+
+  const userId = data.user?.id
+  if (!userId) {
+    throw new Error('Sessao invalida. Faca login novamente.')
+  }
+
+  return userId
 }
 
 export const financeService: FinanceService = {
   saveTransaction: async (transaction: Transaction): Promise<void> => {
-    if (window.api?.saveTransaction) {
-      await window.api.saveTransaction(transaction)
-      return
-    }
+    const userId = await getAuthenticatedUserId()
 
-    const transactions = readWebTransactions()
-    transactions.push(transaction)
-    writeWebTransactions(transactions)
+    const { error } = await supabase.from('transactions').insert({
+      id: transaction.id,
+      user_id: userId,
+      type: transaction.type,
+      category: transaction.category,
+      amount: transaction.amount,
+      description: transaction.description,
+      date: normalizeDateValue(transaction.date),
+      is_monthly_cost: transaction.type === 'saida' ? Boolean(transaction.isMonthlyCost) : false
+    })
+
+    if (error) {
+      throw error
+    }
   },
   getTransactions: async (): Promise<Transaction[]> => {
-    if (window.api?.getTransactions) {
-      return window.api.getTransactions()
+    await getAuthenticatedUserId()
+
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('id, user_id, type, category, amount, description, date, is_monthly_cost')
+      .order('date', { ascending: false })
+
+    if (error) {
+      throw error
     }
 
-    return readWebTransactions()
+    return (data ?? []).map((item) => toTransaction(item as TransactionRow))
   },
   deleteTransaction: async (id: string): Promise<void> => {
-    if (window.api?.deleteTransaction) {
-      await window.api.deleteTransaction(id)
-      return
-    }
+    await getAuthenticatedUserId()
 
-    const transactions = readWebTransactions().filter((transaction) => transaction.id !== id)
-    writeWebTransactions(transactions)
+    const { error } = await supabase.from('transactions').delete().eq('id', id)
+    if (error) {
+      throw error
+    }
   },
   updateTransaction: async (transaction: Transaction): Promise<void> => {
-    if (window.api?.updateTransaction) {
-      await window.api.updateTransaction(transaction)
-      return
+    await getAuthenticatedUserId()
+
+    const { error } = await supabase
+      .from('transactions')
+      .update({
+        type: transaction.type,
+        category: transaction.category,
+        amount: transaction.amount,
+        description: transaction.description,
+        date: normalizeDateValue(transaction.date),
+        is_monthly_cost: transaction.type === 'saida' ? Boolean(transaction.isMonthlyCost) : false
+      })
+      .eq('id', transaction.id)
+
+    if (error) {
+      throw error
     }
-
-    const transactions = readWebTransactions()
-    const index = transactions.findIndex((item) => item.id === transaction.id)
-
-    if (index === -1) {
-      throw new Error('Transacao nao encontrada para edicao.')
-    }
-
-    transactions[index] = transaction
-    writeWebTransactions(transactions)
   },
   exportReportPdf: async (payload: ExportReportPdfPayload): Promise<ExportReportPdfResult> => {
     if (window.api?.exportReportPdf) {

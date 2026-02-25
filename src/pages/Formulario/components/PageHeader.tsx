@@ -1,10 +1,5 @@
-import styles from '../Formulario.module.css'
+import { PageIntro } from '../../../components/molecules/PageIntro/PageIntro'
 
 export const PageHeader = (): JSX.Element => {
-  return (
-    <header className={styles.header}>
-      <h1>Cadastro de Transacao</h1>
-      <p>Formulario simples para registrar entrada ou saida.</p>
-    </header>
-  )
+  return <PageIntro title="Cadastro de Transacao" description="Formulario simples para registrar entrada ou saida." />
 }

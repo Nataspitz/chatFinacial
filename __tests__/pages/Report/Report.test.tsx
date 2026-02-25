@@ -17,6 +17,14 @@ const mockedDeleteTransaction = jest.mocked(financeService.deleteTransaction)
 const mockedUpdateTransaction = jest.mocked(financeService.updateTransaction)
 const mockedExportReportPdf = jest.mocked(financeService.exportReportPdf)
 
+const expectTextVisible = (text: string | RegExp) => {
+  expect(screen.getAllByText(text).length).toBeGreaterThan(0)
+}
+
+const expectTextHidden = (text: string | RegExp) => {
+  expect(screen.queryAllByText(text)).toHaveLength(0)
+}
+
 describe('Report', () => {
   beforeEach(() => {
     mockedGetTransactions.mockReset()
@@ -56,11 +64,11 @@ describe('Report', () => {
       expect(screen.getByText('Saidas')).toBeInTheDocument()
     })
 
-    expect(screen.getByText('Salario')).toBeInTheDocument()
-    expect(screen.getByText('Mercado')).toBeInTheDocument()
-    expect(screen.getByText(/Soma de entradas:/i)).toBeInTheDocument()
-    expect(screen.getByText(/Soma de saidas:/i)).toBeInTheDocument()
-    expect(screen.getByText(/Resultado:/i)).toBeInTheDocument()
+    expectTextVisible('Salario')
+    expectTextVisible('Mercado')
+    expectTextVisible(/Soma de entradas:/i)
+    expectTextVisible(/Soma de saidas:/i)
+    expectTextVisible(/Resultado:/i)
   })
 
   it('deve mostrar erro quando falhar no carregamento', async () => {
@@ -91,7 +99,7 @@ describe('Report', () => {
     const user = userEvent.setup()
 
     await waitFor(() => {
-      expect(screen.getByText('Salario')).toBeInTheDocument()
+      expectTextVisible('Salario')
     })
 
     await user.click(screen.getByRole('button', { name: 'Apagar' }))
@@ -100,7 +108,7 @@ describe('Report', () => {
       expect(mockedDeleteTransaction).toHaveBeenCalledWith('1')
     })
 
-    expect(screen.queryByText('Salario')).not.toBeInTheDocument()
+    expectTextHidden('Salario')
   })
 
   it('deve editar transacao ao clicar em editar e salvar', async () => {
@@ -121,16 +129,17 @@ describe('Report', () => {
     const user = userEvent.setup()
 
     await waitFor(() => {
-      expect(screen.getByText('Salario')).toBeInTheDocument()
+      expectTextVisible('Salario')
     })
 
     await user.click(screen.getByRole('button', { name: 'Editar' }))
 
-    const categoryInput = screen.getByDisplayValue('Salario')
+    const [categoryInput] = screen.getAllByDisplayValue('Salario')
     await user.clear(categoryInput)
     await user.type(categoryInput, 'Bonus')
 
-    await user.click(screen.getByRole('button', { name: 'Salvar' }))
+    const [saveButton] = screen.getAllByRole('button', { name: 'Salvar' })
+    await user.click(saveButton)
 
     await waitFor(() => {
       expect(mockedUpdateTransaction).toHaveBeenCalledWith(
@@ -138,7 +147,7 @@ describe('Report', () => {
       )
     })
 
-    expect(screen.getByText('Bonus')).toBeInTheDocument()
+    expectTextVisible('Bonus')
   })
 
   it('deve filtrar transacoes por ano, mes e dia', async () => {
@@ -176,23 +185,23 @@ describe('Report', () => {
     const user = userEvent.setup()
 
     await waitFor(() => {
-      expect(screen.getByText('Salario')).toBeInTheDocument()
-      expect(screen.getByText('Mercado')).toBeInTheDocument()
-      expect(screen.getByText('Freela')).toBeInTheDocument()
+      expectTextVisible('Salario')
+      expectTextVisible('Mercado')
+      expectTextVisible('Freela')
     })
 
     await user.selectOptions(screen.getByLabelText('Ano'), '2026')
-    expect(screen.getByText('Salario')).toBeInTheDocument()
-    expect(screen.getByText('Mercado')).toBeInTheDocument()
-    expect(screen.queryByText('Freela')).not.toBeInTheDocument()
+    expectTextVisible('Salario')
+    expectTextVisible('Mercado')
+    expectTextHidden('Freela')
 
     await user.selectOptions(screen.getByLabelText('Mes'), '02')
-    expect(screen.getByText('Salario')).toBeInTheDocument()
-    expect(screen.getByText('Mercado')).toBeInTheDocument()
+    expectTextVisible('Salario')
+    expectTextVisible('Mercado')
 
     await user.selectOptions(screen.getByLabelText('Dia'), '20')
-    expect(screen.getByText('Salario')).toBeInTheDocument()
-    expect(screen.queryByText('Mercado')).not.toBeInTheDocument()
+    expectTextVisible('Salario')
+    expectTextHidden('Mercado')
   })
 
   it('deve exportar PDF com o periodo filtrado', async () => {
@@ -222,7 +231,7 @@ describe('Report', () => {
     const user = userEvent.setup()
 
     await waitFor(() => {
-      expect(screen.getByText('Salario')).toBeInTheDocument()
+      expectTextVisible('Salario')
     })
 
     await user.selectOptions(screen.getByLabelText('Ano'), '2026')
@@ -269,16 +278,16 @@ describe('Report', () => {
     const user = userEvent.setup()
 
     await waitFor(() => {
-      expect(screen.getByText('Aluguel')).toBeInTheDocument()
-      expect(screen.getByText('Internet')).toBeInTheDocument()
+      expectTextVisible('Aluguel')
+      expectTextVisible('Internet')
     })
 
     await user.selectOptions(screen.getByLabelText('Ano'), '2026')
     await user.selectOptions(screen.getByLabelText('Mes'), '02')
     await user.selectOptions(screen.getByLabelText('Dia'), '10')
 
-    expect(screen.getByText('Aluguel')).toBeInTheDocument()
-    expect(screen.queryByText('Internet')).not.toBeInTheDocument()
+    expectTextVisible('Aluguel')
+    expectTextHidden('Internet')
   })
 })
 

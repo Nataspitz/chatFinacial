@@ -1,4 +1,5 @@
-import styles from '../Calendario.module.css'
+import { SummaryMetric } from '../../../components/molecules/SummaryMetric/SummaryMetric'
+import { SummaryList } from '../../../components/organisms/SummaryList/SummaryList'
 
 interface MonthSummaryProps {
   totalEntrada: number
@@ -8,9 +9,9 @@ interface MonthSummaryProps {
 
 export const MonthSummary = ({ totalEntrada, totalSaida, formatCurrency }: MonthSummaryProps): JSX.Element => {
   return (
-    <div className={styles.monthSummary}>
-      <span>Entradas do mês: {formatCurrency(totalEntrada)}</span>
-      <span>Saídas do mês: {formatCurrency(totalSaida)}</span>
-    </div>
+    <SummaryList>
+      <SummaryMetric label="Entradas do mes" value={formatCurrency(totalEntrada)} />
+      <SummaryMetric label="Saidas do mes" value={formatCurrency(totalSaida)} />
+    </SummaryList>
   )
 }

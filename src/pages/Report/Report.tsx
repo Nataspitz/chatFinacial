@@ -1,4 +1,7 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { Button, ButtonLoading, ModalBase } from '../../components/ui'
+import { LoadingState } from '../../components/organisms/LoadingState/LoadingState'
+import { PageTemplate } from '../../components/templates/PageTemplate/PageTemplate'
 import { financeService } from '../../services/finance.service'
 import type { ExportReportPdfPayload } from '../../types/report-export.types'
 import type { Transaction } from '../../types/transaction.types'
@@ -8,6 +11,15 @@ import { ReportSummary } from './components/ReportSummary'
 import { ResultFooter } from './components/ResultFooter'
 import { TransactionsTable } from './components/TransactionsTable'
 import styles from './Report.module.css'
+
+interface CreateFormState {
+  type: Transaction['type']
+  amount: string
+  date: string
+  category: string
+  description: string
+  isMonthlyCost: boolean
+}
 
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('pt-BR', {
@@ -30,6 +42,23 @@ const formatDate = (value: string): string => {
 const normalizeTransactionDate = (value: string): string | null => {
   const match = value.match(/^\d{4}-\d{2}-\d{2}/)
   return match ? match[0] : null
+}
+
+const getTodayDate = (): string => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const initialCreateFormState: CreateFormState = {
+  type: 'saida',
+  amount: '',
+  date: getTodayDate(),
+  category: '',
+  description: '',
+  isMonthlyCost: false
 }
 
 const shouldIncludeMonthlyCostInPeriod = (
@@ -93,18 +122,25 @@ export const Report = (): JSX.Element => {
   const [editingDraft, setEditingDraft] = useState<Transaction | null>(null)
   const [isSavingEdit, setIsSavingEdit] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [createForm, setCreateForm] = useState<CreateFormState>(initialCreateFormState)
+  const [isCreating, setIsCreating] = useState(false)
+  const [createFeedback, setCreateFeedback] = useState('')
+
+  const loadTransactions = async (): Promise<void> => {
+    try {
+      const data = await financeService.getTransactions()
+      setTransactions(data)
+      setError('')
+    } catch {
+      setError('Nao foi possivel carregar as transacoes.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   useEffect(() => {
-    void (async () => {
-      try {
-        const data = await financeService.getTransactions()
-        setTransactions(data)
-      } catch {
-        setError('Nao foi possivel carregar as transacoes.')
-      } finally {
-        setIsLoading(false)
-      }
-    })()
+    void loadTransactions()
   }, [])
 
   const yearOptions = useMemo(() => {
@@ -187,9 +223,7 @@ export const Report = (): JSX.Element => {
     field: 'date' | 'category' | 'description' | 'amount' | 'isMonthlyCost',
     value: string | boolean
   ): void => {
-    if (!editingDraft) {
-      return
-    }
+    if (!editingDraft) return
 
     if (field === 'amount') {
       const nextAmount = Number(value as string)
@@ -209,9 +243,7 @@ export const Report = (): JSX.Element => {
   }
 
   const handleEditSave = async (): Promise<void> => {
-    if (!editingDraft || !editingId) {
-      return
-    }
+    if (!editingDraft || !editingId) return
 
     if (!editingDraft.category.trim() || !editingDraft.description.trim() || editingDraft.amount <= 0 || !editingDraft.date) {
       setError('Preencha os campos da edicao com valores validos.')
@@ -235,6 +267,56 @@ export const Report = (): JSX.Element => {
       setError('Nao foi possivel editar a transacao.')
     } finally {
       setIsSavingEdit(false)
+    }
+  }
+
+  const handleCreateSubmit = async (): Promise<void> => {
+    const parsedAmount = Number(createForm.amount.replace(',', '.'))
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      setCreateFeedback('Informe um valor valido maior que zero.')
+      return
+    }
+
+    if (!createForm.date) {
+      setCreateFeedback('Informe a data da transacao.')
+      return
+    }
+
+    const category = createForm.category.trim()
+    if (!category) {
+      setCreateFeedback('Informe a categoria da transacao.')
+      return
+    }
+
+    const description = createForm.description.trim()
+    if (!description) {
+      setCreateFeedback('Informe a descricao da transacao.')
+      return
+    }
+
+    const transaction: Transaction = {
+      id: crypto.randomUUID(),
+      type: createForm.type,
+      amount: parsedAmount,
+      date: createForm.date,
+      category,
+      description,
+      isMonthlyCost: createForm.type === 'saida' ? createForm.isMonthlyCost : false
+    }
+
+    setIsCreating(true)
+    setCreateFeedback('')
+
+    try {
+      await financeService.saveTransaction(transaction)
+      await loadTransactions()
+      setCreateForm(initialCreateFormState)
+      setIsCreateModalOpen(false)
+    } catch (createError) {
+      const message = createError instanceof Error ? createError.message : 'Nao foi possivel registrar a transacao no momento.'
+      setCreateFeedback(message)
+    } finally {
+      setIsCreating(false)
     }
   }
 
@@ -268,8 +350,16 @@ export const Report = (): JSX.Element => {
   }
 
   return (
-    <section className={styles.page}>
-      <PageHeader onExport={() => void handleExportReport()} isExporting={isExporting} disabled={isLoading} />
+    <PageTemplate className={styles.page}>
+      <PageHeader
+        onCreate={() => {
+          setCreateFeedback('')
+          setIsCreateModalOpen(true)
+        }}
+        onExport={() => void handleExportReport()}
+        isExporting={isExporting}
+        disabled={isLoading}
+      />
 
       <ReportFilters
         selectedYear={selectedYear}
@@ -282,7 +372,7 @@ export const Report = (): JSX.Element => {
         onDayChange={setSelectedDay}
       />
 
-      {isLoading && <p>Carregando transacoes...</p>}
+      {isLoading && <LoadingState label="Carregando transacoes..." />}
       {error && <p className={styles.error}>{error}</p>}
 
       {!isLoading && !error && (
@@ -325,6 +415,100 @@ export const Report = (): JSX.Element => {
           <ResultFooter resultBalance={resultBalance} formatCurrency={formatCurrency} />
         </>
       )}
-    </section>
+
+      <ModalBase
+        open={isCreateModalOpen}
+        title="Nova transacao"
+        onClose={() => {
+          if (isCreating) return
+          setIsCreateModalOpen(false)
+          setCreateFeedback('')
+        }}
+      >
+        <form
+          className={styles.createForm}
+          onSubmit={(event) => {
+            event.preventDefault()
+            void handleCreateSubmit()
+          }}
+        >
+          <label className={styles.createField}>
+            <span>Tipo</span>
+            <select
+              value={createForm.type}
+              onChange={(event) =>
+                setCreateForm((prev) => ({
+                  ...prev,
+                  type: event.target.value as Transaction['type'],
+                  isMonthlyCost: event.target.value === 'saida' ? prev.isMonthlyCost : false
+                }))
+              }
+            >
+              <option value="entrada">Entrada</option>
+              <option value="saida">Saida</option>
+            </select>
+          </label>
+
+          {createForm.type === 'saida' ? (
+            <label className={styles.createCheck}>
+              <input
+                type="checkbox"
+                checked={createForm.isMonthlyCost}
+                onChange={(event) => setCreateForm((prev) => ({ ...prev, isMonthlyCost: event.target.checked }))}
+              />
+              <span>Marcar como custo mensal</span>
+            </label>
+          ) : null}
+
+          <label className={styles.createField}>
+            <span>Valor</span>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={createForm.amount}
+              onChange={(event) => setCreateForm((prev) => ({ ...prev, amount: event.target.value }))}
+              placeholder="0.00"
+            />
+          </label>
+
+          <label className={styles.createField}>
+            <span>Data</span>
+            <input type="date" value={createForm.date} onChange={(event) => setCreateForm((prev) => ({ ...prev, date: event.target.value }))} />
+          </label>
+
+          <label className={styles.createField}>
+            <span>Categoria</span>
+            <input
+              type="text"
+              value={createForm.category}
+              onChange={(event) => setCreateForm((prev) => ({ ...prev, category: event.target.value }))}
+              placeholder="Ex: Alimentacao"
+            />
+          </label>
+
+          <label className={`${styles.createField} ${styles.createFieldFull}`}>
+            <span>Descricao</span>
+            <textarea
+              value={createForm.description}
+              onChange={(event) => setCreateForm((prev) => ({ ...prev, description: event.target.value }))}
+              rows={3}
+              placeholder="Descreva a transacao"
+            />
+          </label>
+
+          {createFeedback ? <p className={styles.createFeedback}>{createFeedback}</p> : null}
+
+          <div className={styles.createActions}>
+            <Button type="button" variant="ghost" onClick={() => setIsCreateModalOpen(false)} disabled={isCreating}>
+              Cancelar
+            </Button>
+            <ButtonLoading type="submit" loading={isCreating}>
+              Salvar transacao
+            </ButtonLoading>
+          </div>
+        </form>
+      </ModalBase>
+    </PageTemplate>
   )
 }

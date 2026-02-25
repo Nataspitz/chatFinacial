@@ -1,57 +1,80 @@
-import { createContext, useContext, useMemo, useState, type PropsWithChildren } from 'react'
-
-const AUTH_STORAGE_KEY = 'chatfinancial.auth'
-
-interface AuthState {
-  userName: string
-}
+import type { User } from '@supabase/supabase-js'
+import { createContext, useContext, useEffect, useMemo, useState, type PropsWithChildren } from 'react'
+import { supabase } from '../lib/supabase'
 
 interface AuthContextValue {
+  user: User | null
   isAuthenticated: boolean
-  userName: string | null
-  login: (userName: string) => void
-  logout: () => void
+  loading: boolean
+  signUp: (email: string, password: string) => Promise<void>
+  signIn: (email: string, password: string) => Promise<void>
+  signOut: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-const readAuthStorage = (): AuthState | null => {
-  const rawAuth = window.localStorage.getItem(AUTH_STORAGE_KEY)
-  if (!rawAuth) return null
-
-  try {
-    const parsedAuth = JSON.parse(rawAuth) as AuthState
-    if (typeof parsedAuth.userName !== 'string' || !parsedAuth.userName.trim()) {
-      return null
-    }
-    return { userName: parsedAuth.userName.trim() }
-  } catch {
-    return null
-  }
-}
-
 export const AuthProvider = ({ children }: PropsWithChildren): JSX.Element => {
-  const [authState, setAuthState] = useState<AuthState | null>(() => readAuthStorage())
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  const login = (userName: string): void => {
-    const nextState = { userName: userName.trim() }
-    setAuthState(nextState)
-    window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(nextState))
+  useEffect(() => {
+    let isMounted = true
+
+    void supabase.auth.getSession().then(({ data, error }) => {
+      if (!isMounted) return
+
+      if (error) {
+        setUser(null)
+      } else {
+        setUser(data.session?.user ?? null)
+      }
+      setLoading(false)
+    })
+
+    const {
+      data: { subscription }
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+      setLoading(false)
+    })
+
+    return () => {
+      isMounted = false
+      subscription.unsubscribe()
+    }
+  }, [])
+
+  const signUp = async (email: string, password: string): Promise<void> => {
+    const { error } = await supabase.auth.signUp({ email, password })
+    if (error) {
+      throw error
+    }
   }
 
-  const logout = (): void => {
-    setAuthState(null)
-    window.localStorage.removeItem(AUTH_STORAGE_KEY)
+  const signIn = async (email: string, password: string): Promise<void> => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) {
+      throw error
+    }
+  }
+
+  const signOut = async (): Promise<void> => {
+    const { error } = await supabase.auth.signOut()
+    if (error) {
+      throw error
+    }
   }
 
   const value = useMemo<AuthContextValue>(
     () => ({
-      isAuthenticated: authState !== null,
-      userName: authState?.userName ?? null,
-      login,
-      logout
+      user,
+      isAuthenticated: user !== null,
+      loading,
+      signUp,
+      signIn,
+      signOut
     }),
-    [authState]
+    [loading, user]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

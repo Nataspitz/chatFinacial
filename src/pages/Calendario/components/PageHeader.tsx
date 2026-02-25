@@ -1,10 +1,5 @@
-import styles from '../Calendario.module.css'
+import { PageIntro } from '../../../components/molecules/PageIntro/PageIntro'
 
 export const PageHeader = (): JSX.Element => {
-  return (
-    <header className={styles.header}>
-      <h1>Calendario Financeiro</h1>
-      <p>Entradas e saídas somadas por dia.</p>
-    </header>
-  )
+  return <PageIntro title="Calendario Financeiro" description="Entradas e saidas somadas por dia." />
 }

@@ -18,11 +18,28 @@
   box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.06), 0 20px 32px rgba(0, 0, 0, 0.18);
 }
 
+.mobileBackdrop {
+  display: none;
+}
+
+.mobileDrawer {
+  display: contents;
+}
+
 .brand {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  justify-content: space-between;
+  gap: var(--space-2);
   padding: var(--space-2);
+}
+
+.brandInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  flex: 1;
 }
 
 .brandIcon {
@@ -39,16 +56,46 @@
   color: #f8fbff;
 }
 
+.menuToggle {
+  display: none;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #e6f0fa;
+}
+
+.menuLauncher {
+  margin-right: var(--space-1);
+}
+
+.menuClose {
+  flex-shrink: 0;
+}
+
+.drawerHeader {
+  display: none;
+}
+
 .brandTitle {
   display: block;
   font-size: var(--text-md);
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .brandUser {
   font-size: var(--text-xs);
   color: #96b4ce;
   margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .links {
@@ -122,57 +169,126 @@
 
 @media (max-width: 900px) {
   .navbar {
-    position: static;
+    position: sticky;
+    top: 0;
+    z-index: 50;
     width: auto;
     height: auto;
     min-height: auto;
     overflow: visible;
     flex-direction: row;
     align-items: center;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: var(--space-3);
+    justify-content: flex-start;
+    gap: 0;
     padding: var(--space-3);
   }
 
-  .links {
-    flex-direction: row;
-    width: 100%;
-    justify-content: center;
+  .menuToggle {
+    display: inline-flex;
   }
 
-  .link {
-    width: auto;
-    min-width: 142px;
-    justify-content: center;
+  .menuLauncher {
+    order: -1;
   }
 
-  .brand {
-    width: auto;
-    padding: 0;
+  .mobileBackdropOpen {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    border: none;
+    background: rgba(0, 0, 0, 0.35);
   }
 
-  .actions {
-    margin-top: 0;
+  .mobileDrawer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 80;
+    width: min(84vw, 300px);
+    padding: var(--space-4) var(--space-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    background: linear-gradient(180deg, #0f2f4b 0%, #06243d 100%);
+    box-shadow: 0 14px 24px rgba(0, 0, 0, 0.24);
+    transform: translateX(-104%);
+    transition: transform 0.22s ease;
+    pointer-events: none;
+  }
+
+  .mobileDrawerOpen {
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+
+  .drawerHeader {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: var(--space-2);
   }
 
-  .actionButton {
-    width: auto;
-  }
-}
-
-@media (max-width: 560px) {
   .links {
+    display: flex;
     width: 100%;
-    flex-direction: column;
+    justify-content: flex-start;
+    gap: var(--space-2);
+    padding-top: var(--space-2);
   }
 
   .link {
     width: 100%;
+    min-width: 0;
     justify-content: flex-start;
+    border-color: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .brand {
+    width: 100%;
+    padding: 0;
+    justify-content: space-between;
+  }
+
+  .brandInfo {
+    justify-content: flex-end;
+    margin-left: auto;
+    text-align: right;
+  }
+
+  .brandTitle {
+    display: none;
+  }
+
+  .brandUser {
+    display: none;
+  }
+
+  .brand .brandIcon {
+    display: none;
+  }
+
+  .actions {
+    display: flex;
+    width: 100%;
+    margin-top: auto;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+    padding-top: var(--space-1);
+  }
+
+  .actionButton {
+    width: 100%;
+  }
+
+}
+
+@media (max-width: 560px) {
+  .navbar {
+    padding: var(--space-2);
   }
 
   .brandTitle {
@@ -183,13 +299,15 @@
     font-size: var(--text-xs);
   }
 
-  .actions {
-    width: 100%;
-    display: grid;
+  .brand {
+    gap: var(--space-1);
   }
 
-  .actionButton,
-  .logoutButton {
-    width: 100%;
+  .menuLauncher {
+    margin-right: 0;
+  }
+
+  .brandInfo {
+    gap: var(--space-2);
   }
 }

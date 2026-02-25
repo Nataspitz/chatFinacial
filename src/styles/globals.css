@@ -135,12 +135,15 @@ html {
   background: var(--bg-primary);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
   background: var(--bg-primary);
   color: var(--text-primary);
+  overflow-x: hidden;
 }
 
 html,
@@ -155,11 +158,55 @@ button {
   cursor: pointer;
   border-radius: var(--radius-md);
   transition: all 0.2s ease;
+  touch-action: manipulation;
 }
 
 h1,
 p {
   margin: 0;
+}
+
+h1 {
+  font-size: clamp(1.4rem, 2.5vw, var(--text-4xl));
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+}
+
+h2 {
+  margin: 0;
+  font-size: clamp(1.12rem, 2.1vw, var(--text-2xl));
+  line-height: 1.2;
+}
+
+p {
+  font-size: clamp(0.92rem, 1.35vw, var(--text-md));
+  line-height: 1.45;
+}
+
+@media (max-width: 640px) {
+  :root {
+    --text-sm: 0.8125rem;
+    --text-md: 0.9375rem;
+    --text-lg: 1rem;
+    --text-xl: 1.125rem;
+    --text-2xl: 1.25rem;
+    --text-3xl: 1.4rem;
+  }
+
+  h1 {
+    font-size: 1.4rem;
+    line-height: 1.12;
+  }
+
+  h2 {
+    font-size: 1.15rem;
+    line-height: 1.18;
+  }
+
+  p {
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
 }
 
 .card {

@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { Layout } from '../components/Layout/Layout'
+import { LoadingState } from '../components/organisms/LoadingState/LoadingState'
 import { useAuth } from '../contexts/AuthContext'
 import { Calendario } from '../pages/Calendario/Calendario'
 import { Formulario } from '../pages/Formulario/Formulario'
@@ -8,8 +9,13 @@ import { Report } from '../pages/Report/Report'
 import { ProtectedRoute } from './ProtectedRoute'
 
 const RootRedirect = (): JSX.Element => {
-  const { isAuthenticated } = useAuth()
-  return <Navigate to={isAuthenticated ? '/formulario' : '/login'} replace />
+  const { isAuthenticated, loading } = useAuth()
+
+  if (loading) {
+    return <LoadingState label="Carregando sessao..." centered />
+  }
+
+  return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />
 }
 
 export const router = createBrowserRouter([
@@ -28,7 +34,7 @@ export const router = createBrowserRouter([
         element: <Layout />,
         children: [
           {
-            path: '/formulario',
+            path: '/dashboard',
             element: <Formulario />
           },
           {

@@ -3,3 +3,6 @@ dist-electron
 release
 node_modules
 *.log
+react_APP
+
+dev-dist

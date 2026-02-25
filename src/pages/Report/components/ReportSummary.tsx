@@ -1,4 +1,5 @@
-import styles from '../Report.module.css'
+import { SummaryMetric } from '../../../components/molecules/SummaryMetric/SummaryMetric'
+import { SummaryList } from '../../../components/organisms/SummaryList/SummaryList'
 
 interface ReportSummaryProps {
   totalEntries: number
@@ -8,9 +9,9 @@ interface ReportSummaryProps {
 
 export const ReportSummary = ({ totalEntries, totalOutcomes, formatCurrency }: ReportSummaryProps): JSX.Element => {
   return (
-    <div className={styles.summary}>
-      <span>Soma de entradas: {formatCurrency(totalEntries)}</span>
-      <span>Soma de saidas: {formatCurrency(totalOutcomes)}</span>
-    </div>
+    <SummaryList>
+      <SummaryMetric label="Soma de entradas" value={formatCurrency(totalEntries)} />
+      <SummaryMetric label="Soma de saidas" value={formatCurrency(totalOutcomes)} />
+    </SummaryList>
   )
 }

@@ -5,9 +5,9 @@
   "description": "Desktop app base with Electron + React + Vite + TypeScript",
   "main": "dist-electron/main.js",
   "scripts": {
-    "dev": "concurrently -k \"npm:dev:renderer\" \"npm:dev:electron\" \"npm:dev:app\"",
-    "dev:web": "vite",
-    "dev:renderer": "vite",
+    "dev": "concurrently -k -n WEB,ELECTRON,APP -c cyan,magenta,green \"npm:dev:web\" \"npm:dev:electron\" \"npm:dev:app\"",
+    "dev:web": "vite --host",
+    "dev:renderer": "npm run dev:web",
     "dev:electron": "tsc -p tsconfig.electron.json --watch",
     "dev:app": "wait-on tcp:5173 file:dist-electron/main.js && electron dist-electron/main.js",
     "build": "vite build",
@@ -19,6 +19,7 @@
     "test:watch": "jest --watch"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.97.0",
     "axios": "1.13.5",
     "better-sqlite3": "12.6.2",
     "react": "19.2.4",

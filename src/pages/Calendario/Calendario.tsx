@@ -5,6 +5,8 @@ import { CalendarGrid } from './components/CalendarGrid'
 import { CalendarToolbar } from './components/CalendarToolbar'
 import { MonthSummary } from './components/MonthSummary'
 import { PageHeader } from './components/PageHeader'
+import { PageTemplate } from '../../components/templates/PageTemplate/PageTemplate'
+import { LoadingState } from '../../components/organisms/LoadingState/LoadingState'
 import styles from './Calendario.module.css'
 import type { CalendarCell, DayTotals } from './types'
 
@@ -188,7 +190,7 @@ export const Calendario = (): JSX.Element => {
   }
 
   return (
-    <section className={styles.page}>
+    <PageTemplate className={styles.page}>
       <PageHeader />
       <CalendarToolbar
         currentMonth={currentMonth}
@@ -200,12 +202,12 @@ export const Calendario = (): JSX.Element => {
       />
       <MonthSummary totalEntrada={monthTotalEntrada} totalSaida={monthTotalSaida} formatCurrency={formatCurrency} />
 
-      {isLoading && <p>Carregando calendário...</p>}
+      {isLoading && <LoadingState label="Carregando calendario..." />}
       {error && <p className={styles.error}>{error}</p>}
 
       {!isLoading && !error && (
         <CalendarGrid cells={cells} weekDays={WEEK_DAYS} todayKey={todayKey} formatCurrency={formatCurrency} />
       )}
-    </section>
+    </PageTemplate>
   )
 }

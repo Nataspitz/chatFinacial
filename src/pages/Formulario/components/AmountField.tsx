@@ -1,4 +1,5 @@
 import styles from '../Formulario.module.css'
+import { FormField } from '../../../components/molecules/FormField/FormField'
 
 interface AmountFieldProps {
   value: string
@@ -7,8 +8,7 @@ interface AmountFieldProps {
 
 export const AmountField = ({ value, onChange }: AmountFieldProps): JSX.Element => {
   return (
-    <label className={styles.field}>
-      <span>Valor</span>
+    <FormField label="Valor" className={styles.field}>
       <input
         type="number"
         step="0.01"
@@ -17,6 +17,6 @@ export const AmountField = ({ value, onChange }: AmountFieldProps): JSX.Element 
         onChange={(event) => onChange(event.target.value)}
         placeholder="0.00"
       />
-    </label>
+    </FormField>
   )
 }
