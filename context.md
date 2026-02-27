@@ -1,315 +1,247 @@
-﻿# Contexto Oficial do Projeto
+# Contexto Oficial do Projeto
 
 ## Objetivo
 
-Aplicacao desktop/web para gestao financeira, com autenticacao, visualizacao de transacoes, calendario mensal e exportacao de relatorio em PDF no ambiente desktop (Electron).
+Aplicacao desktop/web para gestao financeira com autenticacao, dashboard executiva, relatorio com CRUD de transacoes, calendario mensal e exportacao de relatorio em PDF no desktop (Electron).
 
 ## Stack atual
 
 - React 19 + Vite + TypeScript
 - React Router DOM
-- Supabase (Auth + tabela `transactions`)
+- Supabase (Auth + tabela `transactions` + tabela `transaction_categories`)
 - CSS Modules
 - Electron (shell desktop + IPC para exportacao de PDF)
 - Jest + Testing Library
 
 ## Estrutura principal
 
-- `src/main.tsx`: bootstrap React, define tema inicial (`light|dark`) e registra PWA SW.
+- `src/main.tsx`: bootstrap React, tema inicial, registro PWA.
 - `src/App.tsx`: compoe `AppProviders` + `RouterMain`.
-- `src/contexts/AppProviders.tsx`: registra providers globais.
-- `src/contexts/AuthContext.tsx`: estado de sessao e funcoes de autenticacao.
-- `src/routes/routerConfig.tsx`: definicao das rotas.
-- `src/routes/ProtectedRoute.tsx`: guarda de acesso autenticado.
-- `src/components/Layout/*` + `src/components/layouts/AppLayout/*`: shell da aplicacao (sidebar + conteudo).
-- `src/components/Navbar/*`: navegacao principal e troca de tema.
-- `src/services/finance.service.ts`: ponto unico de CRUD financeiro no renderer (Supabase).
+- `src/contexts/AuthContext.tsx`: sessao/autenticacao.
+- `src/routes/routerConfig.tsx`: definicao de rotas.
+- `src/components/Layout/*` + `src/components/layouts/AppLayout/*`: shell geral.
+- `src/components/Navbar/*`: navegacao e acoes globais.
+- `src/pages/Dashboard/*`: dashboard executiva completa.
+- `src/pages/Report/*`: relatorio, CRUD e exportacao.
+- `src/pages/Calendario/*`: visao mensal com agregacoes.
+- `src/services/finance.service.ts`: CRUD financeiro + categorias + exportacao.
+- `src/services/business.service.ts`: configuracoes da empresa.
 - `src/lib/supabase.ts`: client Supabase.
-- `src/pages/Login/*`: login/cadastro.
-- `src/pages/Formulario/*`: dashboard placeholder (sem form ativo no momento).
-- `src/pages/Report/*`: relatorio com CRUD completo + exportacao PDF.
-- `src/pages/Calendario/*`: calendario financeiro mensal com agregacoes.
-- `electron/main.ts`: janela desktop + handlers IPC.
-- `electron/preload.ts`: API segura em `window.api`.
+- `electron/main.ts`: janela desktop + handler PDF.
+- `electron/preload.ts`: API segura `window.api`.
+- `supabase/migrations/20260227_create_transaction_categories.sql`: migracao de categorias.
 
-## Rotas atuais e acesso
+## Rotas atuais
 
-- `/` -> redireciona para `/dashboard` se autenticado, senao `/login`.
+- `/` -> redireciona para `/dashboard` (autenticado) ou `/login`.
 - `/login` -> publica.
-- `/dashboard` -> protegida (pagina `Formulario`, hoje como dashboard sem conteudo funcional).
+- `/dashboard` -> protegida (renderiza `Formulario`, que encapsula `Dashboard`).
 - `/report` -> protegida.
 - `/calendario` -> protegida.
 
-## Funcoes globais da aplicacao
+## Fluxo de usuario (fim a fim)
 
-### Bootstrap e infraestrutura
+1. Usuario abre app.
+2. AuthContext consulta sessao no Supabase.
+3. Router redireciona para login ou dashboard.
+4. Usuario autenticado navega pela sidebar (`Dashboard`, `Report`, `Calendario`).
+5. Usuario pode:
+- analisar indicadores no dashboard;
+- criar/editar/excluir transacoes no report;
+- gerenciar categorias no modal dedicado;
+- filtrar por periodo no report/calendario;
+- exportar PDF no report com formulario de exportacao;
+- atualizar configuracoes da conta/empresa no modal da navbar.
+6. Em desktop, exportacao chama IPC e Electron gera PDF com layout customizado.
+7. Logout encerra sessao e retorna ao fluxo de login.
 
-- `src/main.tsx`
-- `registerSW({ immediate: true })`: ativa service worker da PWA.
-- Define tema inicial pelo `localStorage.theme` (fallback `light`).
+## Dashboard (estado atual)
 
-### Auth (src/contexts/AuthContext.tsx)
+Arquivo principal: `src/pages/Dashboard/Dashboard.tsx`
 
-- `signUp(email, password)`: cria conta no Supabase Auth.
-- `signIn(email, password)`: autentica usuario.
-- `signOut()`: encerra sessao.
-- `useEffect` inicial:
-- `supabase.auth.getSession()`: recupera sessao no load.
-- `supabase.auth.onAuthStateChange(...)`: sincroniza estado `user/loading` em mudancas de sessao.
-- Estado exposto:
-- `user`
-- `isAuthenticated`
-- `loading`
+Recursos:
 
-### Controle de rota
+- filtros por modo (anual/mensal), ano e mes;
+- cards executivos (receita, despesa, lucro, margem, variacao);
+- grafico de vela;
+- evolucao de lucro (12 meses);
+- comparativo receita vs despesa;
+- indicadores de saude;
+- secao ROI/acumulado com suporte a configuracao da empresa;
+- tendencia/direcao;
+- painel de ajuda flutuante (`?`) dentro da dashboard, arrastavel no desktop.
 
-- `RootRedirect` (`src/routes/routerConfig.tsx`): decide destino inicial conforme auth.
-- `ProtectedRoute` (`src/routes/ProtectedRoute.tsx`): bloqueia rotas privadas e redireciona para `/login`.
+Dependencias:
 
-### Navbar e UX global (`src/components/Navbar/Navbar.tsx`)
+- `financeService.getTransactions()`
+- `businessService.getBusinessSettings()`
 
-- `getLinkClassName(...)`: aplica estilo ativo em links.
-- `toggleTheme()`: alterna `light/dark` e persiste em `localStorage`.
-- `closeMenu()`: fecha drawer mobile.
-- `useEffect` de tema: aplica `data-theme` no `html`.
-- `useEffect` mobile menu: controla `document.body.style.overflow` com menu aberto.
+## Report (estado atual)
 
-### Modal base (`src/components/ui/ModalBase/ModalBase.tsx`)
+Arquivo principal: `src/pages/Report/Report.tsx`
 
-- `useEffect` quando aberto:
-- trava scroll do body.
-- fecha com tecla `Escape`.
-- restaura estado ao desmontar/fechar.
-- Clique no overlay fecha modal; clique no conteudo nao propaga.
+### CRUD de transacoes
 
-## Servicos e CRUD geral
+- CREATE: modal "Nova transacao".
+- READ: lista de entradas/saidas.
+- UPDATE: edicao inline nas tabelas/cards.
+- DELETE: remocao de transacao.
 
-### Finance Service (src/services/finance.service.ts)
+Regras atuais importantes:
 
-Funcoes auxiliares:
+- categoria na criacao: apenas selecao de categoria existente;
+- categoria na edicao: `select` com categorias cadastradas por tipo (`entrada`/`saida`);
+- custos mensais aplicados conforme regras de recorrencia existentes.
 
-- `toTransaction(row)`: converte linha Supabase para tipo interno `Transaction`.
-- `normalizeDateValue(value)`: normaliza para `YYYY-MM-DD` quando possivel.
-- `getAuthenticatedUserId()`: garante usuario autenticado e retorna `user.id`.
+### Gestao de categorias
 
-CRUD e operacoes:
+Modal dedicado "Gerenciar categorias":
 
-- `saveTransaction(transaction)` -> **CREATE** em `transactions`.
-- `getTransactions()` -> **READ** de `transactions` (ordenado por data desc).
-- `updateTransaction(transaction)` -> **UPDATE** por `id`.
-- `deleteTransaction(id)` -> **DELETE** por `id`.
-- `exportReportPdf(payload)` -> delega para `window.api.exportReportPdf` (apenas desktop).
+- lista de categorias por tipo;
+- criar categoria (botao superior);
+- editar categoria por item;
+- apagar categoria por item;
+- lista com altura fixa + scroll interno.
 
-Observacao importante:
+### Exportacao de PDF
 
-- O CRUD funcional do renderer esta no Supabase.
-- A API `window.api` e usada apenas para exportacao de PDF no desktop.
+Fluxo atual:
 
-### Outros servicos
+- clicar em "Exportar relatorio" abre modal de exportacao;
+- formulario de exportacao:
+  - nome do arquivo;
+  - tipo de periodo (`Ano`, `Mes`, `Dia`);
+  - seletores de ano/mes/dia conforme tipo;
+- ao gerar:
+  - payload inclui nome de arquivo, nome da empresa, data de criacao, periodo, entradas, saidas, totais, resultado e mini tabela dashboard.
 
-- `src/services/db.service.ts`: placeholder (sem implementacao funcional).
-- `src/services/report.service.ts`: placeholder com `initialize()`.
-- `src/services/api.ts`: cliente Axios base (suporte para futuras integracoes).
+## Calendario
 
-## Paginas atuais: funcoes e CRUD
+Arquivo: `src/pages/Calendario/Calendario.tsx`
 
-### 1) Login (`src/pages/Login/Login.tsx`)
+Recursos:
 
-Funcoes:
+- leitura de transacoes;
+- agregacao por dia (entradas/saidas);
+- navegacao mensal;
+- filtro por ano;
+- inclui recorrencia de custos mensais (`isMonthlyCost`) conforme regras de negocio.
 
-- `handleSubmit(event)`:
-- valida email/senha obrigatorios.
-- executa `signIn` ou `signUp` conforme `authMode`.
-- redireciona para rota de origem (`location.state.from`) ou `/dashboard`.
-- Trata loading de sessao e redirecionamento automatico se ja autenticado.
+## Servicos
 
-CRUD da pagina:
-
-- Nao manipula CRUD de transacoes.
-- Opera autenticacao (create de conta e login/logout via contexto).
-
-### 2) Dashboard/Formulario (`src/pages/Formulario/Formulario.tsx`)
-
-Funcoes:
-
-- Componente renderiza somente `PageIntro` com texto de placeholder.
-
-CRUD da pagina:
-
-- **Sem CRUD ativo** atualmente.
-- O formulario transacional anterior foi substituido por placeholder nesta tela.
-
-### 3) Report (`src/pages/Report/Report.tsx`)
-
-Funcoes auxiliares:
-
-- `formatCurrency(value)`
-- `formatDate(value)`
-- `normalizeTransactionDate(value)`
-- `getTodayDate()`
-- `shouldIncludeMonthlyCostInPeriod(transaction, selectedYear, selectedMonth, selectedDay)`
-- `getPeriodLabel()`
-
-Funcoes de estado/acao:
-
-- `loadTransactions()` -> carrega transacoes do servico.
-- `handleDelete(id)` -> remove transacao.
-- `handleEditStart(transaction)` -> inicia edicao inline.
-- `handleEditCancel()` -> cancela edicao.
-- `handleEditChange(field, value)` -> altera rascunho de edicao.
-- `handleEditSave()` -> valida e salva edicao.
-- `handleCreateSubmit()` -> valida e cria nova transacao via modal.
-- `handleExportReport()` -> monta payload e exporta PDF.
-
-Derivacoes com `useMemo`:
-
-- `yearOptions`, `filteredTransactions`, `dayOptions`
-- `entries`, `outcomes`
-- `totalEntries`, `totalOutcomes`, `resultBalance`
-
-CRUD da pagina:
-
-- **CREATE**: `handleCreateSubmit` -> `financeService.saveTransaction`.
-- **READ**: `loadTransactions` -> `financeService.getTransactions`.
-- **UPDATE**: `handleEditSave` -> `financeService.updateTransaction`.
-- **DELETE**: `handleDelete` -> `financeService.deleteTransaction`.
-- Extra: exportacao PDF via `financeService.exportReportPdf`.
-
-Subcomponentes relevantes da pagina Report:
-
-- `PageHeader`: dispara abrir modal e exportar.
-- `ReportFilters`: altera filtros ano/mes/dia.
-- `TransactionsTable`:
-- `getMonthlyCostValue(...)`
-- `renderActions(...)`
-- toggle de expandir/retrair secao.
-- suporta edicao em desktop e card mobile.
-- `ReportSummary` e `ResultFooter`: exibicao de agregados.
-
-### 4) Calendario (`src/pages/Calendario/Calendario.tsx`)
-
-Funcoes auxiliares:
-
-- `formatCurrency(value)`
-- `formatMonthTitle(date)`
-- `toDateKey(date)`
-- `normalizeTransactionDate(value)`
-- `getAvailableYears(transactions, currentYear)`
-- `buildDailyTotalsMap(transactions, monthDate)`
-- `buildCalendarCells(monthDate, totalsMap)`
-
-Funcoes de estado/acao:
-
-- `goToPreviousMonth()`
-- `goToNextMonth()`
-- `onYearChange(event)`
-- `useEffect` inicial para leitura de transacoes.
-
-Derivacoes com `useMemo`:
-
-- `totalsMap`, `cells`, `availableYears`
-- `monthTotalEntrada`, `monthTotalSaida`
-
-Regras de negocio do calendario:
-
-- Soma entradas/saidas por dia.
-- Aplica recorrencia para `saida` com `isMonthlyCost=true` no mesmo dia dos meses seguintes.
-- Ignora recorrencia quando o dia nao existe no mes (ex.: dia 31 em fevereiro).
-
-CRUD da pagina:
-
-- **READ** apenas: consome `financeService.getTransactions`.
-- Nao cria/edita/apaga diretamente.
-
-## Camada desktop (Electron)
-
-### `electron/main.ts`
+## `finance.service.ts`
 
 Funcoes principais:
 
-- `createMainWindow()`
-- `formatCurrency(value)`
-- `formatDate(value)`
-- `escapeHtml(value)`
-- `renderRows(transactions)`
-- `buildReportHtml(payload)`
-- `buildReportPdfFileName()`
+- `saveTransaction`
+- `getTransactions`
+- `updateTransaction`
+- `deleteTransaction`
+- `getCategoryItems`
+- `getCategories`
+- `saveCategory`
+- `updateCategory`
+- `deleteCategory`
+- `exportReportPdf`
 
-Handlers IPC registrados:
+Observacoes:
 
-- `'finance:exportReportPdf'`
+- `getTransactions` retorna ordenado por data desc no Supabase;
+- para PDF, ordenacao crescente (mais antiga -> mais recente) e aplicada antes de renderizar.
 
-Observacao:
+## `business.service.ts`
 
-- O fluxo financeiro do renderer usa Supabase para CRUD.
-- O handler de exportacao PDF segue ativo e utilizado via `window.api.exportReportPdf`.
+Gerencia configuracoes empresariais usadas no dashboard (inclui base de investimento para ROI).
+
+## Supabase (modelo atual)
+
+### Tabela existente
+
+- `transactions`
+
+### Nova tabela
+
+- `transaction_categories`
+  - `id`
+  - `user_id`
+  - `type` (`entrada`/`saida`)
+  - `name`
+  - `name_normalized` (gerada)
+  - `created_at`
+  - `updated_at`
+
+### Funcao SQL
+
+- `ensure_transaction_category(p_name, p_type)`
+
+### Seguranca
+
+- RLS habilitada em `transaction_categories` com politicas por usuario.
+
+Migracao oficial:
+
+- `supabase/migrations/20260227_create_transaction_categories.sql`
+
+## Electron (desktop)
 
 ### `electron/preload.ts`
 
-API exposta em `window.api`:
+Expose:
 
-- `exportReportPdf(payload)`
+- `window.api.exportReportPdf(payload)`
 
-## Listagem de CRUD por pagina (resumo rapido)
+### `electron/main.ts`
 
-- Login: autenticacao (`signIn`, `signUp`, `signOut`), sem CRUD de transacao.
-- Dashboard/Formulario: sem CRUD ativo.
-- Report: CRUD completo de transacao + exportacao PDF.
-- Calendario: somente leitura/agregacao.
+Handler:
 
-## Fluxo da aplicacao (listagem)
+- `ipcMain.handle('finance:exportReportPdf', ...)`
 
-1. App inicia em `src/main.tsx`, aplica tema e monta React.
-2. `AppProviders` sobe `AuthProvider`.
-3. `AuthProvider` consulta sessao no Supabase e observa mudancas de auth.
-4. Router avalia `/` em `RootRedirect`:
+Fluxo:
 
-- autenticado -> `/dashboard`
-- nao autenticado -> `/login`
+1. abre dialogo nativo "Salvar PDF";
+2. usuario escolhe local e nome;
+3. gera HTML com tema visual do sistema;
+4. renderiza PDF via `printToPDF`;
+5. salva no caminho escolhido;
+6. retorna `filePath` no sucesso.
 
-5. Em rota privada, `ProtectedRoute` valida auth antes de renderizar layout.
-6. `Layout/AppLayout` monta Navbar lateral + area de conteudo.
-7. Navegacao entre paginas privadas pela `Navbar` (`/dashboard`, `/report`, `/calendario`).
-8. Fluxo de dados financeiro:
+Conteudo do PDF:
 
-- Paginas chamam `financeService`.
-- `financeService` valida usuario autenticado via Supabase Auth.
-- CRUD de transacoes ocorre na tabela Supabase `transactions`.
+- cabecalho com arquivo, empresa, data criacao e periodo;
+- resumo (entradas, saidas, resultado);
+- tabela de entradas (ordenada crescente por data) + soma;
+- tabela de saidas (ordenada crescente por data) + soma;
+- mini tabela de indicadores da dashboard;
+- resultado final.
 
-9. Fluxo de relatorio:
+## Tema, UX e componentes globais
 
-- Report filtra/transfoma dados locais (ano/mes/dia, totais, entradas/saidas).
-- Edicao e criacao ocorrem na propria pagina e persistem via service.
+- tema `light/dark` persistido via `localStorage`.
+- `ModalBase`:
+  - fecha com ESC;
+  - fecha no overlay;
+  - bloqueia scroll do body enquanto aberto.
 
-10. Fluxo de exportacao PDF (desktop):
+## Scripts principais
 
-- Report chama `financeService.exportReportPdf`.
-- `window.api.exportReportPdf` invoca IPC `finance:exportReportPdf`.
-- Electron gera HTML, imprime PDF e salva arquivo em pasta de relatorios local.
+- `npm run dev` -> web + build watch electron + app desktop.
+- `npm run build` -> build web.
+- `npm run build:electron` -> compila processo Electron.
+- `npm run electron:build` -> pacote desktop.
+- `npm run test` -> testes.
 
-11. Logout:
+## Observacoes operacionais importantes
 
-- `Navbar` chama `signOut()`.
-- estado de auth muda e usuario retorna ao fluxo de login.
-
-## Convencoes atuais
-
-- TypeScript `strict`.
-- Componentes em `PascalCase`.
-- CSS Modules por pagina/componente.
-- Separacao por camadas: UI, paginas, servicos, contexto, rotas, electron.
-
-## Como rodar
-
-1. `npm install`
-2. `npm run dev`
-
-## Build
-
-1. `npm run build`
-2. `npm run build:electron`
-3. `npm run electron:build`
+- Mudancas em `electron/main.ts` exigem reiniciar o processo Electron.
+- `npm run build` nao compila `dist-electron`; para validar processo desktop use `npm run build:electron`.
+- Supabase nao participa da escrita do PDF (PDF e local no desktop).
 
 ## Memoria oficial
 
-Este `context.md` deve ser atualizado sempre que houver mudanca de arquitetura, fluxo, rotas, regras de negocio ou contrato de servicos.
+Este `context.md` deve ser atualizado sempre que houver mudanca de:
+
+- fluxo de usuario;
+- contratos de servico/IPC;
+- rotas e componentes principais;
+- regras de negocio (dashboard, report, calendario);
+- esquema ou migracoes no Supabase.
