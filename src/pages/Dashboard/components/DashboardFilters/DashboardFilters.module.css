@@ -1,0 +1,63 @@
+﻿.filters {
+  border: 1px solid color-mix(in srgb, var(--card-border) 78%, transparent);
+  border-radius: 18px;
+  padding: var(--space-3);
+  background:
+    linear-gradient(170deg, color-mix(in srgb, var(--brand-500) 10%, transparent), transparent 50%),
+    color-mix(in srgb, var(--card-bg) 92%, transparent);
+  box-shadow: var(--shadow-sm);
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: end;
+}
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+  color: var(--text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.field select {
+  border: 1px solid color-mix(in srgb, var(--border-color) 92%, transparent);
+  border-radius: 12px;
+  min-height: 42px;
+  padding: var(--space-1) var(--space-2);
+  background: color-mix(in srgb, var(--bg-secondary) 88%, transparent);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.modeToggle {
+  display: inline-flex;
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--border-color) 92%, transparent);
+  border-radius: 12px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--bg-secondary) 80%, transparent);
+}
+
+.modeButton {
+  flex: 1;
+  min-height: 42px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.modeButton + .modeButton {
+  border-left: 1px solid color-mix(in srgb, var(--border-color) 92%, transparent);
+}
+
+.active {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--brand-500) 22%, transparent), transparent 75%);
+  color: var(--text-primary);
+}
+
+@media (max-width: 640px) {
+  .filters {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,12 +1,4 @@
-﻿import type { Transaction } from './transaction.types'
-
-export interface FinanceSaveRequest {
-  transaction: Transaction
-}
-
-export interface FinanceSaveSuccessResponse {
-  ok: true
-}
+import type { Transaction } from './transaction.types'
 
 export interface FinanceErrorResponse {
   ok: false
@@ -16,42 +8,20 @@ export interface FinanceErrorResponse {
   }
 }
 
-export type FinanceSaveResponse = FinanceSaveSuccessResponse | FinanceErrorResponse
-
-export interface FinanceGetAllSuccessResponse {
-  ok: true
-  data: Transaction[]
-}
-
-export type FinanceGetAllResponse = FinanceGetAllSuccessResponse | FinanceErrorResponse
-
-export interface FinanceDeleteRequest {
-  id: string
-}
-
-export interface FinanceDeleteSuccessResponse {
-  ok: true
-}
-
-export type FinanceDeleteResponse = FinanceDeleteSuccessResponse | FinanceErrorResponse
-
-export interface FinanceUpdateRequest {
-  transaction: Transaction
-}
-
-export interface FinanceUpdateSuccessResponse {
-  ok: true
-}
-
-export type FinanceUpdateResponse = FinanceUpdateSuccessResponse | FinanceErrorResponse
-
 export interface FinanceExportReportPdfRequest {
+  fileName: string
+  companyName: string
+  createdAt: string
   periodLabel: string
   entries: Transaction[]
   outcomes: Transaction[]
   totalEntries: number
   totalOutcomes: number
   resultBalance: number
+  dashboardMetrics: Array<{
+    label: string
+    value: string
+  }>
 }
 
 export interface FinanceExportReportPdfSuccessResponse {

@@ -1,0 +1,18 @@
+﻿.chartWrap {
+  width: 100%;
+  min-width: 0;
+}
+
+.chartWrap :global(.apexcharts-canvas),
+.chartWrap :global(.apexcharts-svg) {
+  background: transparent !important;
+}
+
+.chartWrap :global(.apexcharts-gridline) {
+  stroke: var(--border-color);
+}
+
+.empty {
+  margin: 0;
+  color: var(--text-secondary);
+}

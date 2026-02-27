@@ -1,0 +1,108 @@
+﻿.grid {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.card {
+  border: 1px solid color-mix(in srgb, var(--card-border) 80%, transparent);
+  border-radius: 14px;
+  padding: var(--space-3);
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.card::after {
+  content: '';
+  position: absolute;
+  right: -24px;
+  top: -24px;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: color-mix(in srgb, #ffffff 20%, transparent);
+}
+
+.card::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: var(--space-2);
+  right: var(--space-2);
+  bottom: calc(100% + 8px);
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 90%, transparent);
+  background: color-mix(in srgb, var(--card-bg) 96%, transparent);
+  color: var(--text-primary);
+  font-size: var(--text-xs);
+  line-height: 1.35;
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  z-index: 5;
+}
+
+.card:hover::before,
+.card:focus-within::before {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.balance {
+  background: linear-gradient(145deg, color-mix(in srgb, #3366ff 26%, var(--bg-secondary)), var(--bg-secondary));
+}
+
+.revenue {
+  background: linear-gradient(145deg, color-mix(in srgb, #16c784 24%, var(--bg-secondary)), var(--bg-secondary));
+}
+
+.expense {
+  background: linear-gradient(145deg, color-mix(in srgb, #ef4444 20%, var(--bg-secondary)), var(--bg-secondary));
+}
+
+.margin {
+  background: linear-gradient(145deg, color-mix(in srgb, #1f8fff 20%, var(--bg-secondary)), var(--bg-secondary));
+}
+
+.variation {
+  background: linear-gradient(145deg, color-mix(in srgb, #f59e0b 22%, var(--bg-secondary)), var(--bg-secondary));
+}
+
+.label {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  position: relative;
+  z-index: 1;
+}
+
+.value {
+  font-size: clamp(var(--text-lg), 2.2vw, var(--text-2xl));
+  line-height: 1.15;
+  position: relative;
+  z-index: 1;
+}
+
+.neutral {
+  color: var(--text-primary);
+}
+
+.positive {
+  color: #1ea96f;
+}
+
+.negative {
+  color: #d64e4e;
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

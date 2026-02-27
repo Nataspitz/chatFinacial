@@ -4,12 +4,19 @@ import styles from '../Report.module.css'
 
 interface PageHeaderProps {
   onCreate: () => void
+  onManageCategories: () => void
   onExport: () => void
   isExporting: boolean
   disabled: boolean
 }
 
-export const PageHeader = ({ onCreate, onExport, isExporting, disabled }: PageHeaderProps): JSX.Element => {
+export const PageHeader = ({
+  onCreate,
+  onManageCategories,
+  onExport,
+  isExporting,
+  disabled
+}: PageHeaderProps): JSX.Element => {
   return (
     <PageIntro
       title="Relatorio"
@@ -18,6 +25,9 @@ export const PageHeader = ({ onCreate, onExport, isExporting, disabled }: PageHe
         <div className={styles.headerActions}>
           <Button type="button" variant="secondary" className={styles.addButton} onClick={onCreate}>
             Nova transacao
+          </Button>
+          <Button type="button" variant="ghost" className={styles.addButton} onClick={onManageCategories}>
+            Categorias
           </Button>
           <ButtonLoading
             type="button"

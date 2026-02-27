@@ -1,5 +1,5 @@
 import type { ExportReportPdfPayload, ExportReportPdfResult } from '../types/report-export.types'
-import type { Transaction } from '../types/transaction.types'
+import type { Transaction, TransactionType } from '../types/transaction.types'
 import { supabase } from '../lib/supabase'
 
 interface FinanceService {
@@ -7,6 +7,11 @@ interface FinanceService {
   getTransactions: () => Promise<Transaction[]>
   deleteTransaction: (id: string) => Promise<void>
   updateTransaction: (transaction: Transaction) => Promise<void>
+  getCategoryItems: (type?: TransactionType) => Promise<CategoryItem[]>
+  getCategories: (type?: TransactionType) => Promise<string[]>
+  saveCategory: (name: string, type: TransactionType) => Promise<void>
+  updateCategory: (id: string, name: string, type: TransactionType) => Promise<void>
+  deleteCategory: (id: string) => Promise<void>
   exportReportPdf: (payload: ExportReportPdfPayload) => Promise<ExportReportPdfResult>
 }
 
@@ -19,6 +24,18 @@ interface TransactionRow {
   description: string
   date: string
   is_monthly_cost: boolean
+}
+
+interface CategoryRow {
+  id: string
+  name: string
+  type: TransactionType
+}
+
+export interface CategoryItem {
+  id: string
+  name: string
+  type: TransactionType
 }
 
 const toTransaction = (row: TransactionRow): Transaction => ({
@@ -35,6 +52,8 @@ const normalizeDateValue = (value: string): string => {
   const normalized = value.match(/^\d{4}-\d{2}-\d{2}/)?.[0]
   return normalized ?? value
 }
+
+const normalizeCategoryName = (value: string): string => value.trim().replace(/\s+/g, ' ')
 
 const getAuthenticatedUserId = async (): Promise<string> => {
   const { data, error } = await supabase.auth.getUser()
@@ -106,6 +125,101 @@ export const financeService: FinanceService = {
       })
       .eq('id', transaction.id)
 
+    if (error) {
+      throw error
+    }
+  },
+  getCategoryItems: async (type?: TransactionType): Promise<CategoryItem[]> => {
+    await getAuthenticatedUserId()
+
+    let query = supabase.from('transaction_categories').select('id, name, type').order('name', { ascending: true })
+    if (type) {
+      query = query.eq('type', type)
+    }
+
+    const { data, error } = await query
+    if (error) {
+      if (error.code === '42P01') {
+        return []
+      }
+
+      throw error
+    }
+
+    const rows = (data ?? []) as CategoryRow[]
+    return rows
+      .map((item) => ({
+        id: item.id,
+        name: normalizeCategoryName(item.name),
+        type: item.type
+      }))
+      .filter((item) => Boolean(item.name))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+  },
+  getCategories: async (type?: TransactionType): Promise<string[]> => {
+    const items = await financeService.getCategoryItems(type)
+    return items.map((item) => item.name)
+  },
+  saveCategory: async (name: string, type: TransactionType): Promise<void> => {
+    const normalizedName = normalizeCategoryName(name)
+    if (!normalizedName) {
+      throw new Error('Informe uma categoria valida.')
+    }
+
+    await getAuthenticatedUserId()
+
+    const { error: rpcError } = await supabase.rpc('ensure_transaction_category', {
+      p_name: normalizedName,
+      p_type: type
+    })
+
+    if (!rpcError) {
+      return
+    }
+
+    if (rpcError.code !== 'PGRST202' && rpcError.code !== '42883') {
+      throw rpcError
+    }
+
+    const { error } = await supabase.from('transaction_categories').upsert(
+      {
+        name: normalizedName,
+        type
+      },
+      {
+        onConflict: 'user_id,type,name_normalized',
+        ignoreDuplicates: true
+      }
+    )
+
+    if (error && error.code !== '42P01') {
+      throw error
+    }
+  },
+  updateCategory: async (id: string, name: string, type: TransactionType): Promise<void> => {
+    const normalizedName = normalizeCategoryName(name)
+    if (!normalizedName) {
+      throw new Error('Informe uma categoria valida.')
+    }
+
+    await getAuthenticatedUserId()
+
+    const { error } = await supabase
+      .from('transaction_categories')
+      .update({
+        name: normalizedName,
+        type
+      })
+      .eq('id', id)
+
+    if (error) {
+      throw error
+    }
+  },
+  deleteCategory: async (id: string): Promise<void> => {
+    await getAuthenticatedUserId()
+
+    const { error } = await supabase.from('transaction_categories').delete().eq('id', id)
     if (error) {
       throw error
     }

@@ -1,0 +1,29 @@
+﻿.grid {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.item {
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  padding: var(--space-3);
+  display: grid;
+  gap: var(--space-1);
+}
+
+.label {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.value {
+  color: var(--text-primary);
+  font-size: var(--text-lg);
+}
+
+.hint {
+  color: var(--text-muted);
+}

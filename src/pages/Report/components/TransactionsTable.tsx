@@ -8,6 +8,7 @@ import styles from '../Report.module.css'
 interface TransactionsTableProps {
   title: string
   transactions: Transaction[]
+  categoryOptions: string[]
   onDelete: (id: string) => Promise<void>
   onEditStart: (transaction: Transaction) => void
   onEditCancel: () => void
@@ -24,6 +25,7 @@ interface TransactionsTableProps {
 export const TransactionsTable = ({
   title,
   transactions,
+  categoryOptions,
   onDelete,
   onEditStart,
   onEditCancel,
@@ -38,6 +40,15 @@ export const TransactionsTable = ({
 }: TransactionsTableProps): JSX.Element => {
   const [isExpanded, setIsExpanded] = useState(true)
   const [mobileActionsId, setMobileActionsId] = useState<string | null>(null)
+
+  const getCategorySelectOptions = (currentCategory: string): string[] => {
+    const normalizedCurrent = currentCategory.trim()
+    if (!normalizedCurrent) {
+      return categoryOptions
+    }
+
+    return categoryOptions.includes(normalizedCurrent) ? categoryOptions : [normalizedCurrent, ...categoryOptions]
+  }
 
   const getMonthlyCostValue = (transaction: Transaction, isEditing: boolean): JSX.Element | string => {
     if (isEditing && editingDraft) {
@@ -171,12 +182,17 @@ export const TransactionsTable = ({
                       </td>
                       <td>
                         {isEditing ? (
-                          <input
-                            type="text"
+                          <select
                             className={styles.cellInput}
                             value={editingDraft.category}
                             onChange={(event) => onEditChange('category', event.target.value)}
-                          />
+                          >
+                            {getCategorySelectOptions(editingDraft.category).map((option) => (
+                              <option key={option} value={option}>
+                                {option}
+                              </option>
+                            ))}
+                          </select>
                         ) : (
                           transaction.category
                         )}
@@ -241,12 +257,17 @@ export const TransactionsTable = ({
                     <span className={styles.mobileLabel}>Categoria</span>
                     <div className={styles.mobileValue}>
                       {isEditing ? (
-                        <input
-                          type="text"
+                        <select
                           className={styles.cellInput}
                           value={editingDraft.category}
                           onChange={(event) => onEditChange('category', event.target.value)}
-                        />
+                        >
+                          {getCategorySelectOptions(editingDraft.category).map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
                       ) : (
                         transaction.category
                       )}

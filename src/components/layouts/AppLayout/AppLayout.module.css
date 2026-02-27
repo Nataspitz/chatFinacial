@@ -8,7 +8,7 @@
   flex: 1;
   padding: var(--space-5);
   min-width: 0;
-  margin-left: 248px;
+  margin-left: var(--sidebar-desktop-width, 248px);
   padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
 }
 

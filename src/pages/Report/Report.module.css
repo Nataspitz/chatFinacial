@@ -242,6 +242,30 @@
   color: var(--text-primary);
 }
 
+.exportForm {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.exportPeriodGrid {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.exportPreview {
+  border: 1px solid color-mix(in srgb, var(--brand-500) 25%, var(--border-color));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg-secondary) 92%, transparent);
+  padding: var(--space-2);
+  display: grid;
+  gap: 2px;
+}
+
+.exportPreview p {
+  margin: 0;
+}
+
 .createForm {
   display: grid;
   gap: var(--space-3);
@@ -254,6 +278,11 @@
   color: var(--text-primary);
   font-weight: var(--font-weight-semibold);
   min-width: 0;
+}
+
+.createFieldType {
+  grid-column: 1 / -1;
+  max-width: 280px;
 }
 
 .createFieldFull {
@@ -269,6 +298,79 @@
   font: inherit;
   color: var(--text-primary);
   background: var(--bg-secondary);
+}
+
+.categoryInline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.categoryManager {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  height: min(72dvh, 540px);
+}
+
+.categoryTopBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color) 80%, transparent);
+}
+
+.categoryList {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: var(--space-1);
+  overflow: auto;
+  padding-right: var(--space-1);
+  padding-top: var(--space-1);
+}
+
+.categoryItem {
+  border: 1px solid color-mix(in srgb, var(--border-color) 85%, transparent);
+  border-radius: 12px;
+  padding: var(--space-2) var(--space-3);
+  background: color-mix(in srgb, var(--bg-secondary) 92%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.categoryItem:hover {
+  border-color: color-mix(in srgb, var(--brand-500) 45%, var(--border-color));
+}
+
+.categoryItemInfo {
+  min-width: 0;
+  flex: 1;
+}
+
+.categoryName {
+  display: block;
+  color: var(--text-primary);
+  font-size: var(--text-md);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.categoryActions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: nowrap;
+  flex-shrink: 0;
 }
 
 .createCheck {
@@ -357,8 +459,34 @@
     grid-template-columns: 1fr;
   }
 
+  .exportPeriodGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .createFieldType {
+    max-width: none;
+  }
+
+  .categoryInline {
+    grid-template-columns: 1fr;
+  }
+
+  .categoryItem {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .categoryTopBar {
+    align-items: stretch;
+  }
+
   .createActions {
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .categoryActions {
+    display: flex;
+    justify-content: flex-end;
   }
 }

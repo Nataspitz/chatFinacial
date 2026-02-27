@@ -1,29 +1,16 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, type SaveDialogOptions } from 'electron'
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type {
-  FinanceDeleteRequest,
-  FinanceDeleteResponse,
   FinanceExportReportPdfRequest,
-  FinanceExportReportPdfResponse,
-  FinanceGetAllResponse,
-  FinanceSaveRequest,
-  FinanceSaveResponse,
-  FinanceUpdateRequest,
-  FinanceUpdateResponse
+  FinanceExportReportPdfResponse
 } from './types/finance-ipc.types'
-import {
-  deleteTransactionFromDb,
-  getAllTransactionsFromDb,
-  getFinanceDbPath,
-  getFinanceReportsDirectoryPath,
-  saveTransactionToDb,
-  updateTransactionInDb
-} from './services/finance-json.service'
 import type { Transaction } from './types/transaction.types'
 
+let mainWindow: BrowserWindow | null = null
+
 const createMainWindow = (): void => {
-  const window = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     minWidth: 980,
@@ -38,11 +25,11 @@ const createMainWindow = (): void => {
   })
 
   if (app.isPackaged) {
-    window.loadFile(path.join(__dirname, '../dist/index.html'))
+    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
     return
   }
 
-  window.loadURL('http://localhost:5173')
+  mainWindow.loadURL('http://localhost:5173')
 }
 
 const formatCurrency = (value: number): string =>
@@ -69,12 +56,33 @@ const escapeHtml = (value: string): string =>
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;')
 
+const getSortableTimestamp = (value: string): number => {
+  const normalized = value.match(/^\d{4}-\d{2}-\d{2}/)?.[0]
+  if (normalized) {
+    const [year, month, day] = normalized.split('-').map(Number)
+    return new Date(year, month - 1, day).getTime()
+  }
+
+  const brDate = value.match(/^(\d{2})\/(\d{2})\/(\d{4})/)
+  if (brDate) {
+    const [, day, month, year] = brDate
+    return new Date(Number(year), Number(month) - 1, Number(day)).getTime()
+  }
+
+  const parsed = new Date(value).getTime()
+  return Number.isNaN(parsed) ? Number.MAX_SAFE_INTEGER : parsed
+}
+
+const sortTransactionsByDateAsc = (transactions: Transaction[]): Transaction[] => {
+  return [...transactions].sort((a, b) => getSortableTimestamp(a.date) - getSortableTimestamp(b.date))
+}
+
 const renderRows = (transactions: Transaction[]): string => {
   if (transactions.length === 0) {
     return '<tr><td colspan="4">Nenhuma transacao neste periodo.</td></tr>'
   }
 
-  return transactions
+  return sortTransactionsByDateAsc(transactions)
     .map(
       (transaction) => `
       <tr>
@@ -88,6 +96,50 @@ const renderRows = (transactions: Transaction[]): string => {
     .join('')
 }
 
+const sanitizeFileName = (value: string): string => {
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return 'relatorio-financeiro'
+  }
+
+  return trimmed
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\\/:*?"<>|]/g, '-')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
+const formatCreatedAt = (value: string): string => {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  return new Intl.DateTimeFormat('pt-BR', {
+    dateStyle: 'short',
+    timeStyle: 'short'
+  }).format(date)
+}
+
+const renderDashboardRows = (rows: Array<{ label: string; value: string }>): string => {
+  if (rows.length === 0) {
+    return '<tr><td colspan="2">Sem dados da dashboard para o periodo.</td></tr>'
+  }
+
+  return rows
+    .map(
+      (row) => `
+      <tr>
+        <td>${escapeHtml(row.label)}</td>
+        <td>${escapeHtml(row.value)}</td>
+      </tr>
+    `
+    )
+    .join('')
+}
+
 const buildReportHtml = (payload: FinanceExportReportPdfRequest): string => {
   return `<!doctype html>
 <html lang="pt-BR">
@@ -95,30 +147,131 @@ const buildReportHtml = (payload: FinanceExportReportPdfRequest): string => {
     <meta charset="utf-8" />
     <title>Relatorio Financeiro</title>
     <style>
-      body { font-family: Arial, sans-serif; margin: 24px; color: #111827; }
-      h1 { margin: 0 0 8px 0; font-size: 20px; }
-      p { margin: 0 0 12px 0; font-size: 12px; color: #4b5563; }
-      .summary { display: flex; gap: 16px; margin: 16px 0; font-size: 12px; font-weight: 600; }
-      .section { margin-top: 16px; }
-      .section h2 { margin: 0 0 8px 0; font-size: 14px; }
-      table { width: 100%; border-collapse: collapse; font-size: 11px; }
-      th, td { border: 1px solid #d1d5db; text-align: left; padding: 6px; }
-      tfoot td { font-weight: 700; }
+      :root {
+        --brand-700: #1b3cb3;
+        --brand-500: #3366ff;
+        --brand-100: #dbe6ff;
+        --text-primary: #111827;
+        --text-secondary: #4b5563;
+        --border: #d1d5db;
+        --surface: #f8faff;
+        --success: #16c784;
+        --danger: #ef4444;
+      }
+      body {
+        font-family: "Segoe UI", Arial, sans-serif;
+        margin: 20px;
+        color: var(--text-primary);
+        background: #ffffff;
+        font-size: 12px;
+      }
+      .report {
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        overflow: hidden;
+      }
+      .header {
+        padding: 18px 20px;
+        background: linear-gradient(120deg, var(--brand-700), var(--brand-500));
+        color: #ffffff;
+      }
+      h1 { margin: 0; font-size: 22px; }
+      .meta {
+        margin-top: 10px;
+        display: grid;
+        gap: 4px;
+      }
+      .meta p {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.94);
+      }
+      .content { padding: 14px 18px 18px; }
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+      .summary-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 8px 10px;
+      }
+      .summary-card strong { display: block; color: var(--text-secondary); font-size: 11px; margin-bottom: 3px; }
+      .summary-card span { font-size: 14px; font-weight: 700; }
+      .summary-card.result span { color: ${payload.resultBalance >= 0 ? 'var(--success)' : 'var(--danger)'}; }
+      .section { margin-top: 14px; }
+      h2 {
+        margin: 0 0 7px 0;
+        font-size: 14px;
+        color: var(--brand-700);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 11px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      th {
+        background: var(--brand-100);
+        color: #0e1f5c;
+        text-align: left;
+        padding: 7px 8px;
+        border-bottom: 1px solid var(--border);
+      }
+      td {
+        border-top: 1px solid var(--border);
+        padding: 7px 8px;
+      }
+      tbody tr:nth-child(even) td {
+        background: #fafcff;
+      }
+      tfoot td {
+        background: #eef4ff;
+        font-weight: 700;
+      }
+      .result {
+        margin-top: 16px;
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--brand-700);
+      }
     </style>
   </head>
   <body>
-    <h1>Relatorio Financeiro</h1>
-    <p>Periodo selecionado: ${escapeHtml(payload.periodLabel)}</p>
+    <main class="report">
+      <header class="header">
+        <h1>Relatorio Financeiro</h1>
+        <div class="meta">
+          <p><strong>Arquivo:</strong> ${escapeHtml(payload.fileName)}</p>
+          <p><strong>Empresa:</strong> ${escapeHtml(payload.companyName)}</p>
+          <p><strong>Data de criacao:</strong> ${escapeHtml(formatCreatedAt(payload.createdAt))}</p>
+          <p><strong>Periodo selecionado:</strong> ${escapeHtml(payload.periodLabel)}</p>
+        </div>
+      </header>
 
-    <div class="summary">
-      <span>Total entradas: ${escapeHtml(formatCurrency(payload.totalEntries))}</span>
-      <span>Total saidas: ${escapeHtml(formatCurrency(payload.totalOutcomes))}</span>
-      <span>Resultado: ${escapeHtml(formatCurrency(payload.resultBalance))}</span>
-    </div>
+      <section class="content">
+        <div class="summary">
+          <div class="summary-card">
+            <strong>Total entradas</strong>
+            <span>${escapeHtml(formatCurrency(payload.totalEntries))}</span>
+          </div>
+          <div class="summary-card">
+            <strong>Total saidas</strong>
+            <span>${escapeHtml(formatCurrency(payload.totalOutcomes))}</span>
+          </div>
+          <div class="summary-card result">
+            <strong>Resultado</strong>
+            <span>${escapeHtml(formatCurrency(payload.resultBalance))}</span>
+          </div>
+        </div>
 
-    <section class="section">
-      <h2>Entradas</h2>
-      <table>
+        <section class="section">
+          <h2>Entradas</h2>
+          <table>
         <thead>
           <tr>
             <th>Data</th>
@@ -128,12 +281,18 @@ const buildReportHtml = (payload: FinanceExportReportPdfRequest): string => {
           </tr>
         </thead>
         <tbody>${renderRows(payload.entries)}</tbody>
-      </table>
-    </section>
+        <tfoot>
+          <tr>
+            <td colspan="3">Soma total das entradas</td>
+            <td>${escapeHtml(formatCurrency(payload.totalEntries))}</td>
+          </tr>
+        </tfoot>
+          </table>
+        </section>
 
-    <section class="section">
-      <h2>Saidas</h2>
-      <table>
+        <section class="section">
+          <h2>Saidas</h2>
+          <table>
         <thead>
           <tr>
             <th>Data</th>
@@ -143,87 +302,39 @@ const buildReportHtml = (payload: FinanceExportReportPdfRequest): string => {
           </tr>
         </thead>
         <tbody>${renderRows(payload.outcomes)}</tbody>
-      </table>
-    </section>
+        <tfoot>
+          <tr>
+            <td colspan="3">Soma total das saidas</td>
+            <td>${escapeHtml(formatCurrency(payload.totalOutcomes))}</td>
+          </tr>
+        </tfoot>
+          </table>
+        </section>
+
+        <section class="section">
+          <h2>Mini tabela de dados da dashboard</h2>
+          <table>
+        <thead>
+          <tr>
+            <th>Indicador</th>
+            <th>Valor</th>
+          </tr>
+        </thead>
+            <tbody>${renderDashboardRows(payload.dashboardMetrics)}</tbody>
+          </table>
+        </section>
+
+        <p class="result">Resultado final do periodo: ${escapeHtml(formatCurrency(payload.resultBalance))}</p>
+      </section>
+    </main>
   </body>
 </html>`
 }
 
-const buildReportPdfFileName = (): string => {
+const buildReportPdfFileName = (baseName: string): string => {
   const timestamp = new Date().toISOString().replaceAll(':', '-').replaceAll('.', '-')
-  return `relatorio-financeiro-${timestamp}.pdf`
+  return `${sanitizeFileName(baseName)}-${timestamp}.pdf`
 }
-
-ipcMain.handle('finance:save', async (_event, payload: FinanceSaveRequest): Promise<FinanceSaveResponse> => {
-  try {
-    const financeDbPath = getFinanceDbPath(app.getPath('desktop'))
-    await saveTransactionToDb(financeDbPath, payload.transaction)
-    return { ok: true }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Falha ao salvar transacao.'
-    return {
-      ok: false,
-      error: {
-        code: 'FINANCE_SAVE_ERROR',
-        message
-      }
-    }
-  }
-})
-
-ipcMain.handle('finance:getAll', async (): Promise<FinanceGetAllResponse> => {
-  try {
-    const financeDbPath = getFinanceDbPath(app.getPath('desktop'))
-    const transactions = await getAllTransactionsFromDb(financeDbPath)
-    return {
-      ok: true,
-      data: transactions
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Falha ao buscar transacoes.'
-    return {
-      ok: false,
-      error: {
-        code: 'FINANCE_GET_ALL_ERROR',
-        message
-      }
-    }
-  }
-})
-
-ipcMain.handle('finance:delete', async (_event, payload: FinanceDeleteRequest): Promise<FinanceDeleteResponse> => {
-  try {
-    const financeDbPath = getFinanceDbPath(app.getPath('desktop'))
-    await deleteTransactionFromDb(financeDbPath, payload.id)
-    return { ok: true }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Falha ao apagar transacao.'
-    return {
-      ok: false,
-      error: {
-        code: 'FINANCE_DELETE_ERROR',
-        message
-      }
-    }
-  }
-})
-
-ipcMain.handle('finance:update', async (_event, payload: FinanceUpdateRequest): Promise<FinanceUpdateResponse> => {
-  try {
-    const financeDbPath = getFinanceDbPath(app.getPath('desktop'))
-    await updateTransactionInDb(financeDbPath, payload.transaction)
-    return { ok: true }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Falha ao editar transacao.'
-    return {
-      ok: false,
-      error: {
-        code: 'FINANCE_UPDATE_ERROR',
-        message
-      }
-    }
-  }
-})
 
 ipcMain.handle(
   'finance:exportReportPdf',
@@ -231,9 +342,36 @@ ipcMain.handle(
     let pdfWindow: BrowserWindow | null = null
 
     try {
-      const reportsDir = getFinanceReportsDirectoryPath(app.getPath('desktop'))
-      const filePath = path.join(reportsDir, buildReportPdfFileName())
+      const reportsDir = path.join(app.getPath('desktop'), 'chatfinacial', 'reports')
       await mkdir(reportsDir, { recursive: true })
+
+      const defaultPath = path.join(reportsDir, buildReportPdfFileName(payload.fileName))
+      const parentWindow = mainWindow && !mainWindow.isDestroyed() ? mainWindow : BrowserWindow.getFocusedWindow()
+      const dialogOptions: SaveDialogOptions = {
+        title: 'Salvar relatorio em PDF',
+        defaultPath,
+        buttonLabel: 'Salvar PDF',
+        filters: [{ name: 'PDF', extensions: ['pdf'] }],
+        properties: ['showOverwriteConfirmation']
+      }
+
+      let filePath = parentWindow
+        ? dialog.showSaveDialogSync(parentWindow, dialogOptions)
+        : dialog.showSaveDialogSync(dialogOptions)
+
+      if (!filePath) {
+        const fallback = parentWindow
+          ? await dialog.showSaveDialog(parentWindow, dialogOptions)
+          : await dialog.showSaveDialog(dialogOptions)
+        filePath = fallback.filePath
+      }
+
+      if (!filePath) {
+        return {
+          ok: true,
+          canceled: true
+        }
+      }
 
       pdfWindow = new BrowserWindow({
         show: false,
