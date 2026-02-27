@@ -10,11 +10,21 @@
     "package.json"
   ],
   "asar": true,
+  "extraResources": [
+    {
+      "from": "build/icons",
+      "to": "icons"
+    }
+  ],
   "win": {
     "target": "nsis",
+    "icon": "build/icons/app.ico",
     "signAndEditExecutable": false
   },
   "nsis": {
+    "installerIcon": "build/icons/app.ico",
+    "uninstallerIcon": "build/icons/app.ico",
+    "installerHeaderIcon": "build/icons/app.ico",
     "oneClick": false,
     "allowToChangeInstallationDirectory": true
   }

@@ -1,6 +1,6 @@
 .navbar {
   position: fixed;
-  top: 0;
+  top: var(--desktop-titlebar-height, 0px);
   left: 0;
   bottom: 0;
   z-index: 30;
@@ -9,8 +9,8 @@
   align-items: stretch;
   gap: var(--space-4);
   width: var(--sidebar-desktop-width, 248px);
-  min-height: 100vh;
-  height: 100vh;
+  min-height: calc(100vh - var(--desktop-titlebar-height, 0px));
+  height: calc(100vh - var(--desktop-titlebar-height, 0px));
   overflow: hidden;
   padding: var(--space-3);
   background: linear-gradient(180deg, #0f2f4b 0%, #06243d 100%);
@@ -269,7 +269,7 @@
 @media (max-width: 900px) {
   .navbar {
     position: sticky;
-    top: 0;
+    top: var(--desktop-titlebar-height, 0px);
     z-index: 50;
     width: auto;
     height: auto;
@@ -305,7 +305,7 @@
 
   .mobileDrawer {
     position: fixed;
-    top: 0;
+    top: var(--desktop-titlebar-height, 0px);
     left: 0;
     bottom: 0;
     z-index: 80;

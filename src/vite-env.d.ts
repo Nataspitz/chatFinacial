@@ -17,6 +17,13 @@ declare global {
       exportReportPdf: (
         payload: import('./types/report-export.types').ExportReportPdfPayload
       ) => Promise<import('./types/report-export.types').ExportReportPdfResult>
+      windowControls?: {
+        minimize: () => Promise<void>
+        maximizeToggle: () => Promise<boolean>
+        close: () => Promise<void>
+        isMaximized: () => Promise<boolean>
+        onMaximizedStateChange: (callback: (isMaximized: boolean) => void) => () => void
+      }
     }
   }
 }

@@ -9,12 +9,30 @@ import type { Transaction } from './types/transaction.types'
 
 let mainWindow: BrowserWindow | null = null
 
+const resolveWindowIconPath = (): string => {
+  const iconFile = process.platform === 'win32' ? 'app.ico' : 'app.png'
+
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'icons', iconFile)
+  }
+
+  return path.join(__dirname, '../build/icons', iconFile)
+}
+
 const createMainWindow = (): void => {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     minWidth: 980,
     minHeight: 640,
+    frame: false,
+    titleBarStyle: 'hidden',
+    titleBarOverlay: false,
+    hasShadow: true,
+    roundedCorners: true,
+    thickFrame: false,
+    backgroundColor: '#0b1220',
+    icon: resolveWindowIconPath(),
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -24,6 +42,14 @@ const createMainWindow = (): void => {
     }
   })
 
+  mainWindow.on('maximize', () => {
+    mainWindow?.webContents.send('window:maximized-state', true)
+  })
+
+  mainWindow.on('unmaximize', () => {
+    mainWindow?.webContents.send('window:maximized-state', false)
+  })
+
   if (app.isPackaged) {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
     return
@@ -31,6 +57,36 @@ const createMainWindow = (): void => {
 
   mainWindow.loadURL('http://localhost:5173')
 }
+
+ipcMain.handle('window:minimize', () => {
+  const targetWindow = BrowserWindow.getFocusedWindow() ?? mainWindow
+  targetWindow?.minimize()
+})
+
+ipcMain.handle('window:maximizeToggle', () => {
+  const targetWindow = BrowserWindow.getFocusedWindow() ?? mainWindow
+  if (!targetWindow) {
+    return false
+  }
+
+  if (targetWindow.isMaximized()) {
+    targetWindow.unmaximize()
+    return false
+  }
+
+  targetWindow.maximize()
+  return true
+})
+
+ipcMain.handle('window:close', () => {
+  const targetWindow = BrowserWindow.getFocusedWindow() ?? mainWindow
+  targetWindow?.close()
+})
+
+ipcMain.handle('window:isMaximized', () => {
+  const targetWindow = BrowserWindow.getFocusedWindow() ?? mainWindow
+  return targetWindow?.isMaximized() ?? false
+})
 
 const formatCurrency = (value: number): string =>
   new Intl.NumberFormat('pt-BR', {
@@ -413,6 +469,8 @@ ipcMain.handle(
 )
 
 app.whenReady().then(() => {
+  app.setName('ChatFinacial')
+  app.setAppUserModelId('com.chatfinacial.app')
   createMainWindow()
 
   app.on('activate', () => {
