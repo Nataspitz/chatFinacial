@@ -7,7 +7,13 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icons/app-icon.svg'],
+      includeAssets: [
+        'icons/app-icon.svg',
+        'icons/app-icon-192.png',
+        'icons/app-icon-512.png',
+        'icons/app-icon-maskable-512.png',
+        'icons/apple-touch-icon.png'
+      ],
       manifest: {
         name: 'ChatFinacial',
         short_name: 'ChatFin',
@@ -20,10 +26,27 @@ export default defineConfig({
         lang: 'pt-BR',
         icons: [
           {
+            src: '/icons/app-icon-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/icons/app-icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/icons/app-icon-maskable-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable'
+          },
+          {
             src: '/icons/app-icon.svg',
             sizes: 'any',
-            type: 'image/svg+xml',
-            purpose: 'any maskable'
+            type: 'image/svg+xml'
           }
         ]
       },
