@@ -8,6 +8,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: [
+        'favicon.ico',
+        'favicon.svg',
         'icons/app-icon.svg',
         'icons/app-icon-192.png',
         'icons/app-icon-512.png',

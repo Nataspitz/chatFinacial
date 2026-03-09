@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom'
+import { createBrowserRouter, createHashRouter, Navigate, type RouteObject } from 'react-router-dom'
 import { Layout } from '../components/Layout/Layout'
 import { LoadingState } from '../components/organisms/LoadingState/LoadingState'
 import { useAuth } from '../contexts/AuthContext'
@@ -18,7 +18,7 @@ const RootRedirect = (): JSX.Element => {
   return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />
 }
 
-export const router = createBrowserRouter([
+const routes: RouteObject[] = [
   {
     path: '/',
     element: <RootRedirect />
@@ -49,4 +49,8 @@ export const router = createBrowserRouter([
       }
     ]
   }
-])
+]
+
+const isFileProtocol = typeof window !== 'undefined' && window.location.protocol === 'file:'
+
+export const router = isFileProtocol ? createHashRouter(routes) : createBrowserRouter(routes)

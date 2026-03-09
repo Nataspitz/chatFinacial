@@ -1,6 +1,6 @@
 {
   "name": "chatfinacial",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Desktop app base with Electron + React + Vite + TypeScript",
   "main": "dist-electron/main.js",
@@ -12,8 +12,9 @@
     "dev:app": "wait-on tcp:5173 file:dist-electron/main.js && electron dist-electron/main.js",
     "build": "vite build",
     "build:web": "vite build",
+    "build:desktop:web": "vite build --base ./",
     "build:electron": "tsc -p tsconfig.electron.json",
-    "electron:build": "npm run build && npm run build:electron && electron-builder --config electron-builder.json",
+    "electron:build": "npm run build:desktop:web && npm run build:electron && electron-builder --config electron-builder.json",
     "preview": "vite preview",
     "test": "jest --runInBand",
     "test:watch": "jest --watch"

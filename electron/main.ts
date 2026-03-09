@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, type SaveDialogOptions } from 'electron'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { appendFile, mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type {
   FinanceExportReportPdfRequest,
@@ -8,6 +8,18 @@ import type {
 import type { Transaction } from './types/transaction.types'
 
 let mainWindow: BrowserWindow | null = null
+const isProdDiagnosticsEnabled = process.env.CHATFIN_DEBUG_PROD === '1'
+
+const writeMainLog = async (message: string): Promise<void> => {
+  try {
+    const logsDir = path.join(app.getPath('userData'), 'logs')
+    await mkdir(logsDir, { recursive: true })
+    const logPath = path.join(logsDir, 'production-debug.log')
+    await appendFile(logPath, `[${new Date().toISOString()}] ${message}\n`, 'utf8')
+  } catch {
+    // Ignore log write failures to avoid affecting app runtime.
+  }
+}
 
 const resolveWindowIconPath = (): string => {
   const iconFile = process.platform === 'win32' ? 'app.ico' : 'app.png'
@@ -50,7 +62,63 @@ const createMainWindow = (): void => {
     mainWindow?.webContents.send('window:maximized-state', false)
   })
 
+  mainWindow.webContents.on('did-finish-load', () => {
+    void writeMainLog(`did-finish-load: ${mainWindow?.webContents.getURL() ?? 'unknown'}`)
+
+    if (isProdDiagnosticsEnabled) {
+      setTimeout(() => {
+        void mainWindow?.webContents
+          .executeJavaScript(
+            `(() => {
+              const card = document.querySelector('[class*="card"]');
+              const title = document.querySelector('h1');
+              const root = document.getElementById('root');
+              const cardStyles = card ? window.getComputedStyle(card) : null;
+              const titleStyles = title ? window.getComputedStyle(title) : null;
+              return {
+                href: window.location.href,
+                bodyTextLength: (document.body?.innerText ?? '').trim().length,
+                rootTextLength: (root?.innerText ?? '').trim().length,
+                inputs: document.querySelectorAll('input').length,
+                buttons: document.querySelectorAll('button').length,
+                headings: document.querySelectorAll('h1,h2,h3').length,
+                cardBackground: cardStyles?.backgroundColor ?? null,
+                cardColor: cardStyles?.color ?? null,
+                titleColor: titleStyles?.color ?? null,
+                titleText: title?.textContent ?? null
+              };
+            })();`,
+            true
+          )
+          .then((snapshot) => writeMainLog(`dom-snapshot: ${JSON.stringify(snapshot)}`))
+          .catch((error: unknown) =>
+            writeMainLog(
+              `dom-snapshot-error: ${error instanceof Error ? error.message : 'unknown error while reading DOM snapshot'}`
+            )
+          )
+      }, 2500)
+    }
+  })
+
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    void writeMainLog(`did-fail-load: code=${errorCode} url=${validatedURL} error=${errorDescription}`)
+  })
+
+  mainWindow.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+    if (level <= 2) {
+      void writeMainLog(`renderer-console: level=${level} source=${sourceId}:${line} message=${message}`)
+    }
+  })
+
+  mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    void writeMainLog(`render-process-gone: reason=${details.reason} exitCode=${details.exitCode}`)
+  })
+
   if (app.isPackaged) {
+    if (isProdDiagnosticsEnabled) {
+      mainWindow.webContents.openDevTools({ mode: 'detach' })
+      void writeMainLog('production diagnostics enabled')
+    }
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
     return
   }

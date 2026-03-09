@@ -1,0 +1,36 @@
+name: Electron Production Performance
+
+on:
+  workflow_dispatch:
+
+jobs:
+  benchmark-windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.12.0
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Electron production package
+        run: npm run electron:build
+
+      - name: Run production benchmark
+        shell: pwsh
+        run: |
+          ./scripts/benchmark-electron.ps1 -ExePath "./release/win-unpacked/ChatFinacial.exe" -Runs 5 -SampleSeconds 10
+
+      - name: Upload benchmark artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-production-benchmark
+          path: performance-results/

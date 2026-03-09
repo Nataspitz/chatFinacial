@@ -1,0 +1,46 @@
+﻿{
+    "generated_at_utc":  "2026-03-09T15:16:56.2135971Z",
+    "exe_path":  ".\\release\\win-unpacked\\ChatFinacial.exe",
+    "runs":  5,
+    "sample_seconds":  8,
+    "avg_startup_sec":  8.03,
+    "avg_memory_mb":  97.26,
+    "all_runs_alive":  true,
+    "results":  [
+                    {
+                        "run":  1,
+                        "startup_sec":  8.08,
+                        "alive":  true,
+                        "working_set_mb":  97.32,
+                        "cpu_sec":  0.36
+                    },
+                    {
+                        "run":  2,
+                        "startup_sec":  8.02,
+                        "alive":  true,
+                        "working_set_mb":  97.19,
+                        "cpu_sec":  0.34
+                    },
+                    {
+                        "run":  3,
+                        "startup_sec":  8.01,
+                        "alive":  true,
+                        "working_set_mb":  97.34,
+                        "cpu_sec":  0.56
+                    },
+                    {
+                        "run":  4,
+                        "startup_sec":  8.02,
+                        "alive":  true,
+                        "working_set_mb":  97.23,
+                        "cpu_sec":  0.33
+                    },
+                    {
+                        "run":  5,
+                        "startup_sec":  8.01,
+                        "alive":  true,
+                        "working_set_mb":  97.24,
+                        "cpu_sec":  0.36
+                    }
+                ]
+}
