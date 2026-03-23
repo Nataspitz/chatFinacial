@@ -8,6 +8,7 @@ import styles from '../Report.module.css'
 interface TransactionsTableProps {
   title: string
   transactions: Transaction[]
+  emptyMessage?: string
   categoryOptions: string[]
   onDelete: (id: string) => Promise<void>
   onEditStart: (transaction: Transaction) => void
@@ -20,6 +21,7 @@ interface TransactionsTableProps {
   isSavingEdit: boolean
   formatCurrency: (value: number) => string
   formatDate: (value: string) => string
+  variant?: 'default' | 'future'
 }
 
 export const TransactionsTable = ({
@@ -36,7 +38,9 @@ export const TransactionsTable = ({
   editingDraft,
   isSavingEdit,
   formatCurrency,
-  formatDate
+  formatDate,
+  emptyMessage = 'Nenhuma transacao encontrada.',
+  variant = 'default'
 }: TransactionsTableProps): JSX.Element => {
   const [isExpanded, setIsExpanded] = useState(true)
   const [mobileActionsId, setMobileActionsId] = useState<string | null>(null)
@@ -127,7 +131,7 @@ export const TransactionsTable = ({
   }
 
   return (
-    <ContentCard className={styles.section}>
+    <ContentCard className={`${styles.section} ${variant === 'future' ? styles.sectionFuture : ''}`.trim()}>
       <button
         type="button"
         className={styles.sectionToggle}
@@ -139,7 +143,7 @@ export const TransactionsTable = ({
       </button>
 
       {!isExpanded ? null : transactions.length === 0 ? (
-        <p className={styles.empty}>Nenhuma transacao encontrada.</p>
+        <p className={styles.empty}>{emptyMessage}</p>
       ) : (
         <>
           <div className={styles.tableWrap}>

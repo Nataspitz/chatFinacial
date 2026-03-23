@@ -3,12 +3,14 @@
 interface TrendIndicatorsProps {
   variation: number | null
   trend: 'subindo' | 'descendo' | 'estavel'
+  valuesVisible?: boolean
 }
 
-export const TrendIndicators = ({ variation, trend }: TrendIndicatorsProps): JSX.Element => {
+export const TrendIndicators = ({ variation, trend, valuesVisible = true }: TrendIndicatorsProps): JSX.Element => {
   const isUp = variation !== null && variation >= 0
   const indicatorClass = isUp ? styles.positive : styles.negative
   const variationLabel = variation === null ? 'Sem base de comparacao' : `${variation >= 0 ? '+' : ''}${variation.toFixed(2)}%`
+  const visibleVariationLabel = valuesVisible ? variationLabel : '••••••'
 
   return (
     <section className={styles.wrapper}>
@@ -18,7 +20,7 @@ export const TrendIndicators = ({ variation, trend }: TrendIndicatorsProps): JSX
       </article>
       <article className={styles.item}>
         <p className={styles.label}>Variacao percentual</p>
-        <strong className={indicatorClass}>{variationLabel}</strong>
+        <strong className={indicatorClass}>{visibleVariationLabel}</strong>
       </article>
       <article className={styles.item}>
         <p className={styles.label}>Tendencia media</p>

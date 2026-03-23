@@ -1,124 +1,124 @@
-# Historico de versoes do ChatFinacial
+# ChatFinacial Version History
 
-Este arquivo foi escrito para usuarios e pessoas comuns entenderem como o ChatFinacial evoluiu ao longo do tempo.
+This file is written for end users and non-technical readers.
 
-Aqui voce vai encontrar:
+It explains:
 
-- o que cada versao entregou na pratica;
-- o que mudou no uso do app;
-- o que ainda faltava melhorar em cada etapa;
-- qual parece ser o proximo passo natural para o produto.
+- what each version delivered in practice;
+- what changed in daily usage;
+- what was still missing at each stage;
+- what the next product step should be.
 
-## Como ler este historico
+## How to read this history
 
-- As versoes abaixo mostram a evolucao oficial mais confiavel do app.
-- O foco aqui nao e explicar codigo, e sim mostrar o que mudou para quem usa o sistema.
-- Quando houver algo tecnico importante, ele sera explicado de forma simples.
+- The versions below reflect the most reliable official product timeline.
+- The focus is user impact, not code internals.
+- When technical context matters, it is explained in plain language.
 
-## Visao rapida
+## Quick overview
 
-| Versao | Periodo | Situacao | O que ela representou |
+| Version | Period | Status | What it represented |
 | --- | --- | --- | --- |
-| `0.1.0` | 20/02/2026 a 27/02/2026 | Primeira base completa do MVP | O app deixou de ser uma ideia solta e virou um produto funcional com login, dashboard, relatorios, calendario e PDF |
-| `0.1.1` | 09/03/2026 | Versao oficial atual confirmada | O app ficou mais organizado para distribuir, medir desempenho e apoiar analises com ajuda de IA |
+| `0.1.0` | Feb 20, 2026 to Feb 27, 2026 | First complete MVP baseline | The app moved from early concept to a usable product with login, dashboard, reports, calendar, and PDF export |
+| `0.1.1` | Mar 9, 2026 | Current confirmed official release | The app became more organized for distribution, performance tracking, and AI-assisted financial analysis |
 
-## Versao 0.1.0
+## Version 0.1.0
 
-### O que essa versao trouxe
+### What this version delivered
 
-A `0.1.0` foi a fase em que o ChatFinacial ganhou forma de verdade. Antes disso, o projeto ainda estava montando estrutura. Nessa etapa, ele passou a funcionar como um MVP real de gestao financeira.
+`0.1.0` was the phase where ChatFinacial became a real product. Before this point, the project was still building its foundation. In this cycle, it reached a working MVP state for financial management.
 
-### O que o usuario passou a poder fazer
+### What users were able to do
 
-- entrar no sistema com login;
-- navegar entre as areas principais do app;
-- cadastrar receitas e despesas;
-- editar e apagar transacoes;
-- visualizar relatorios financeiros;
-- acompanhar um calendario mensal com entradas e saidas;
-- usar uma dashboard com indicadores mais executivos;
-- organizar categorias de entrada e saida;
-- exportar relatorios em PDF;
-- usar o app tanto na web quanto em uma versao desktop.
+- sign in with account authentication;
+- navigate the main product areas;
+- create income and expense entries;
+- edit and delete transactions;
+- view financial reports;
+- track monthly results in a calendar view;
+- use an executive dashboard with key indicators;
+- manage income and expense categories;
+- export reports as PDF;
+- use both web and desktop versions.
 
-### O que mudou na experiencia
+### What changed in the user experience
 
-- O app deixou de ter cara de prototipo simples e ganhou uma estrutura mais clara.
-- A navegacao ficou melhor, com sidebar, protecao de acesso e fluxo de sessao.
-- A dashboard passou a mostrar melhor a saude financeira do negocio.
-- O relatorio ficou mais util para o dia a dia, porque passou a reunir operacao, filtros e controle de transacoes.
-- O calendario ajudou a visualizar o comportamento financeiro ao longo do mes.
+- The app moved away from a simple prototype feel.
+- Navigation improved with sidebar structure and protected access.
+- The dashboard gave clearer visibility into business financial health.
+- The report area became more useful for daily operations.
+- The calendar improved monthly cash movement visibility.
 
-### O que ainda era limitado
+### What was still limited
 
-- Muitas melhorias grandes ficaram acumuladas dentro da mesma versao.
-- Ainda nao existia um historico claro de versoes para usuarios acompanharem.
-- O processo de lancamento ainda era pouco organizado.
-- O app ja era funcional, mas ainda tinha cara de MVP em varios pontos.
+- Many major changes were grouped under the same version.
+- There was still no clear release communication for end users.
+- The release process was not fully structured.
+- The product was functional, but still clearly an MVP.
 
-### O que essa versao provou
+### What this version proved
 
-A `0.1.0` provou que o ChatFinacial conseguia sair do papel e funcionar como um sistema de controle financeiro de verdade, com base suficiente para continuar evoluindo.
+`0.1.0` proved that ChatFinacial could operate as a real financial control product, with enough foundation to scale further.
 
-### Proximo passo esperado naquela epoca
+### Expected next step at that time
 
-Deixar o produto mais profissional, com melhor distribuicao, mais confianca nas entregas e melhorias na apresentacao para o usuario final.
+Improve professionalism in distribution, reliability, and product presentation.
 
-## Versao 0.1.1
+## Version 0.1.1
 
-### O que essa versao trouxe
+### What this version delivered
 
-A `0.1.1` foi uma etapa de amadurecimento. Ela nao reinventou o produto, mas melhorou a forma como ele e entregue, acompanhado e usado no dia a dia.
+`0.1.1` was a maturity step. It did not redefine the product, but improved delivery quality, operational visibility, and practical usage.
 
-### O que o usuario percebe nessa versao
+### What users noticed in this version
 
-- melhor preparo da versao desktop para funcionar com os arquivos visuais corretos;
-- novos icones e ajustes visuais de distribuicao;
-- uma funcionalidade para montar prompts de analise financeira com ajuda de IA;
-- uma base inicial para acompanhar desempenho da aplicacao desktop.
+- better desktop packaging behavior for static assets;
+- updated visual assets and icons for distribution;
+- a feature to generate financial analysis prompts for AI use;
+- an initial baseline for desktop app performance measurement.
 
-### O que mudou na pratica
+### What changed in practice
 
-- A instalacao desktop ficou mais alinhada com a estrutura do projeto.
-- O sistema ganhou um modal que ajuda o usuario a montar um texto pronto para levar seus dados financeiros ao ChatGPT Web.
-- Esse recurso organiza periodo, tipo de analise, principais numeros e categorias mais relevantes, facilitando uma conversa mais inteligente sobre os dados.
-- O projeto passou a guardar uma referencia inicial de desempenho da versao Electron, o que ajuda a evitar que futuras versoes fiquem mais pesadas sem controle.
+- Desktop installation became more consistent with project build structure.
+- The app gained a prompt generator modal for ChatGPT Web workflows.
+- This feature organizes period, analysis focus, totals, and top categories automatically.
+- The team started storing production performance benchmarks to track app weight over time.
 
-### O que ainda faltava melhorar
+### What still needed improvement
 
-- O processo de versao e release ainda nao estava totalmente profissionalizado.
-- Ainda havia dependencia de etapas manuais para empacotar e acompanhar novas entregas.
-- O produto passou a ter um recurso de apoio com IA, mas sem uma comunicacao ainda tao clara para usuarios dentro da documentacao principal.
-- Surgiu um desalinhamento entre alguns arquivos locais gerados e a versao oficial registrada do projeto.
+- Versioning and release flow were still not fully professionalized.
+- Packaging and release checks still depended on manual steps.
+- The AI helper feature needed clearer user-facing documentation.
+- Some local generated files were not fully aligned with official version records.
 
-### O que essa versao representa
+### What this version represents
 
-A `0.1.1` representa a passagem de um MVP apenas funcional para um MVP que comeca a se preocupar tambem com distribuicao, qualidade percebida e apoio inteligente ao usuario.
+`0.1.1` marks the shift from a functional MVP to an MVP that also cares about distribution quality and assisted analysis workflows.
 
-### Proximo passo esperado
+### Expected next step
 
-Transformar o MVP em um produto mais profissional, com:
+Turn the MVP into a more professional product with:
 
-- historico de versoes mais claro;
-- lancamentos mais organizados;
-- mais consistencia entre numero da versao e instaladores gerados;
-- mais refinamento na experiencia de uso.
+- clearer release history;
+- more structured release operations;
+- stronger consistency between version number and installer artifacts;
+- better overall product polish.
 
-## Sobre arquivos locais que nao entram como versao oficial
+## Local artifacts that are not official releases
 
-Existem alguns itens no projeto que aparecem localmente, mas nao devem ser tratados como versoes oficiais para o publico.
+Some local items exist in the repository but should not be treated as official public releases.
 
-- A pasta `react_APP/` parece ser um material legado ou paralelo, e nao a base oficial atual do produto.
-- Existe tambem um instalador `1.2.0` salvo localmente, mas ele nao esta acompanhado pela mesma organizacao de versao que aparece no restante do projeto.
+- The `react_APP/` folder appears to be legacy or parallel material, not the active official product base.
+- A local `1.2.0` installer exists, but it is not accompanied by the same release traceability shown by official project metadata.
 
-Por isso, a referencia oficial mais segura neste momento continua sendo a `0.1.1`.
+Because of that, `0.1.1` remains the safest official product reference at this time.
 
-## Como atualizar este arquivo no futuro
+## How to update this file in future releases
 
-Quando uma nova versao surgir, o ideal e manter este mesmo estilo:
+For each new version, keep this same style:
 
-- explicar o que mudou para o usuario;
-- evitar linguagem muito tecnica;
-- mostrar o que melhorou;
-- apontar o que ainda falta;
-- deixar claro qual e a versao oficial do momento.
+- explain user-facing impact;
+- avoid heavy technical language;
+- highlight what improved;
+- state what is still missing;
+- clearly identify the current official version.

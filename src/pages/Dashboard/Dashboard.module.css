@@ -21,6 +21,13 @@
   gap: var(--space-3);
 }
 
+.valueVisibilityButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  white-space: nowrap;
+}
+
 .twoColumns {
   display: grid;
   gap: var(--space-3);

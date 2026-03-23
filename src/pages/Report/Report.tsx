@@ -61,6 +61,15 @@ const getTodayDate = (): string => {
   return `${year}-${month}-${day}`
 }
 
+const getCurrentYear = (): string => String(new Date().getFullYear())
+
+const getCurrentMonth = (): string => String(new Date().getMonth() + 1).padStart(2, '0')
+
+const isTransactionInFuture = (transaction: Transaction, todayDate: string): boolean => {
+  const normalizedDate = normalizeTransactionDate(transaction.date)
+  return Boolean(normalizedDate && normalizedDate > todayDate)
+}
+
 const initialCreateFormState: CreateFormState = {
   type: 'saida',
   amount: '',
@@ -155,8 +164,8 @@ export const Report = (): JSX.Element => {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string>('')
-  const [selectedYear, setSelectedYear] = useState<string>('all')
-  const [selectedMonth, setSelectedMonth] = useState<string>('all')
+  const [selectedYear, setSelectedYear] = useState<string>(getCurrentYear)
+  const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth)
   const [selectedDay, setSelectedDay] = useState<string>('all')
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -241,7 +250,10 @@ export const Report = (): JSX.Element => {
       .filter((value): value is string => Boolean(value))
       .map((value) => value.slice(0, 4))
 
-    return ['all', ...Array.from(new Set(years)).sort((a, b) => Number(b) - Number(a))]
+    const uniqueYears = Array.from(new Set(years)).sort((a, b) => Number(b) - Number(a))
+    const currentYear = getCurrentYear()
+
+    return ['all', ...Array.from(new Set([currentYear, ...uniqueYears])).sort((a, b) => Number(b) - Number(a))]
   }, [transactions])
 
   const filteredTransactions = useMemo(() => {
@@ -335,6 +347,33 @@ export const Report = (): JSX.Element => {
     })
   }, [exportForm.day, exportForm.month, exportForm.periodType, exportForm.year, transactions])
 
+  const todayDate = getTodayDate()
+
+  const getLatestTransactionDate = (items: Transaction[], type: Transaction['type']): string | null => {
+    const latestDate = items
+      .filter((item) => item.type === type)
+      .map((item) => normalizeTransactionDate(item.date))
+      .filter((value): value is string => Boolean(value))
+      .reduce<string | null>((latest, current) => {
+        if (latest === null) {
+          return current
+        }
+
+        return current > latest ? current : latest
+      }, null)
+
+    return latestDate
+  }
+
+  const mainTransactions = useMemo(
+    () => filteredTransactions.filter((item) => !isTransactionInFuture(item, todayDate)),
+    [filteredTransactions, todayDate]
+  )
+  const futureTransactions = useMemo(
+    () => filteredTransactions.filter((item) => isTransactionInFuture(item, todayDate)),
+    [filteredTransactions, todayDate]
+  )
+
   const exportEntries = useMemo(
     () => sortTransactionsByDateAsc(exportTransactions.filter((item) => item.type === 'entrada')),
     [exportTransactions]
@@ -356,11 +395,15 @@ export const Report = (): JSX.Element => {
     [exportTotalEntries, exportTotalOutcomes]
   )
 
-  const entries = useMemo(() => filteredTransactions.filter((item) => item.type === 'entrada'), [filteredTransactions])
-  const outcomes = useMemo(() => filteredTransactions.filter((item) => item.type === 'saida'), [filteredTransactions])
+  const entries = useMemo(() => mainTransactions.filter((item) => item.type === 'entrada'), [mainTransactions])
+  const outcomes = useMemo(() => mainTransactions.filter((item) => item.type === 'saida'), [mainTransactions])
+  const futureEntries = useMemo(() => futureTransactions.filter((item) => item.type === 'entrada'), [futureTransactions])
+  const futureOutcomes = useMemo(() => futureTransactions.filter((item) => item.type === 'saida'), [futureTransactions])
   const totalEntries = useMemo(() => entries.reduce((acc, item) => acc + item.amount, 0), [entries])
   const totalOutcomes = useMemo(() => outcomes.reduce((acc, item) => acc + item.amount, 0), [outcomes])
   const resultBalance = useMemo(() => totalEntries - totalOutcomes, [totalEntries, totalOutcomes])
+  const lastEntryDate = useMemo(() => getLatestTransactionDate(mainTransactions, 'entrada'), [mainTransactions])
+  const lastOutcomeDate = useMemo(() => getLatestTransactionDate(mainTransactions, 'saida'), [mainTransactions])
 
   const handleDelete = async (id: string): Promise<void> => {
     setDeletingId(id)
@@ -691,10 +734,29 @@ export const Report = (): JSX.Element => {
         <>
           <ReportSummary totalEntries={totalEntries} totalOutcomes={totalOutcomes} formatCurrency={formatCurrency} />
 
+          <div className={styles.listHeader}>
+            <div className={styles.listHeaderCopy}>
+              <h2 className={styles.listHeaderTitle}>Lançamentos</h2>
+              <p className={styles.listHeaderDescription}>
+                As listas principais mostram movimentações até hoje. As futuras ficam separadas abaixo.
+              </p>
+            </div>
+
+            <div className={styles.listHeaderMeta}>
+              <span className={styles.listHeaderMetaItem}>
+                <strong>Última entrada:</strong> {lastEntryDate ? formatDate(lastEntryDate) : 'Sem lançamentos'}
+              </span>
+              <span className={styles.listHeaderMetaItem}>
+                <strong>Última saída:</strong> {lastOutcomeDate ? formatDate(lastOutcomeDate) : 'Sem lançamentos'}
+              </span>
+            </div>
+          </div>
+
           <div className={styles.grid}>
             <TransactionsTable
               title="Entradas"
               transactions={entries}
+              emptyMessage="Sem entradas até hoje."
               categoryOptions={categoryOptions.entrada.map((item) => item.name)}
               onDelete={handleDelete}
               onEditStart={handleEditStart}
@@ -709,8 +771,9 @@ export const Report = (): JSX.Element => {
               formatDate={formatDate}
             />
             <TransactionsTable
-              title="Saidas"
+              title="Saídas"
               transactions={outcomes}
+              emptyMessage="Sem saídas até hoje."
               categoryOptions={categoryOptions.saida.map((item) => item.name)}
               onDelete={handleDelete}
               onEditStart={handleEditStart}
@@ -723,6 +786,42 @@ export const Report = (): JSX.Element => {
               isSavingEdit={isSavingEdit}
               formatCurrency={formatCurrency}
               formatDate={formatDate}
+            />
+            <TransactionsTable
+              title="Entradas futuras"
+              transactions={futureEntries}
+              emptyMessage="Sem entradas futuras."
+              categoryOptions={categoryOptions.entrada.map((item) => item.name)}
+              onDelete={handleDelete}
+              onEditStart={handleEditStart}
+              onEditCancel={handleEditCancel}
+              onEditChange={handleEditChange}
+              onEditSave={handleEditSave}
+              deletingId={deletingId}
+              editingId={editingId}
+              editingDraft={editingDraft}
+              isSavingEdit={isSavingEdit}
+              formatCurrency={formatCurrency}
+              formatDate={formatDate}
+              variant="future"
+            />
+            <TransactionsTable
+              title="Saídas futuras"
+              transactions={futureOutcomes}
+              emptyMessage="Sem saídas futuras."
+              categoryOptions={categoryOptions.saida.map((item) => item.name)}
+              onDelete={handleDelete}
+              onEditStart={handleEditStart}
+              onEditCancel={handleEditCancel}
+              onEditChange={handleEditChange}
+              onEditSave={handleEditSave}
+              deletingId={deletingId}
+              editingId={editingId}
+              editingDraft={editingDraft}
+              isSavingEdit={isSavingEdit}
+              formatCurrency={formatCurrency}
+              formatDate={formatDate}
+              variant="future"
             />
           </div>
 
