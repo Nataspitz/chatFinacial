@@ -47,9 +47,11 @@ Aplicacao desktop/web para gestao financeira com autenticacao, dashboard executi
 4. Usuario autenticado navega pela sidebar (`Dashboard`, `Report`, `Calendario`).
 5. Usuario pode:
 - analisar indicadores no dashboard;
+- ocultar/exibir valores sensiveis no dashboard (icone de olho);
 - criar/editar/excluir transacoes no report;
 - gerenciar categorias no modal dedicado;
 - filtrar por periodo no report/calendario;
+- acompanhar separadamente lancamentos futuros no report;
 - exportar PDF no report com formulario de exportacao;
 - atualizar configuracoes da conta/empresa no modal da navbar.
 6. Em desktop, exportacao chama IPC e Electron gera PDF com layout customizado.
@@ -62,13 +64,16 @@ Arquivo principal: `src/pages/Dashboard/Dashboard.tsx`
 Recursos:
 
 - filtros por modo (anual/mensal), ano e mes;
+- modo padrao: mensal no mes atual;
 - cards executivos (receita, despesa, lucro, margem, variacao);
+- card de lucro liquido considera somente lancamentos com data <= hoje;
 - grafico de vela;
 - evolucao de lucro (12 meses);
 - comparativo receita vs despesa;
 - indicadores de saude;
 - secao ROI/acumulado com suporte a configuracao da empresa;
 - tendencia/direcao;
+- toggle de privacidade com icone de olho (mostrar/ocultar valores);
 - painel de ajuda flutuante (`?`) dentro da dashboard, arrastavel no desktop.
 
 Dependencias:
@@ -83,15 +88,20 @@ Arquivo principal: `src/pages/Report/Report.tsx`
 ### CRUD de transacoes
 
 - CREATE: modal "Nova transacao".
-- READ: lista de entradas/saidas.
+- READ: listas de entradas/saidas ate hoje + listas separadas de entradas/saidas futuras.
 - UPDATE: edicao inline nas tabelas/cards.
 - DELETE: remocao de transacao.
 
 Regras atuais importantes:
 
+- filtro padrao abre no ano/mes atual (em vez de "todos");
 - categoria na criacao: apenas selecao de categoria existente;
 - categoria na edicao: `select` com categorias cadastradas por tipo (`entrada`/`saida`);
 - custos mensais aplicados conforme regras de recorrencia existentes.
+- ultimo lancamento de entrada e saida exibido no topo da lista (baseado na data real de `date`, nao na data de cadastro).
+- transacoes com `date > hoje` sao exibidas em secoes proprias:
+  - `Entradas futuras`
+  - `Saidas futuras`
 
 ### Gestao de categorias
 

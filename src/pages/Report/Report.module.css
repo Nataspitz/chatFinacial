@@ -41,6 +41,48 @@
   gap: var(--space-3);
 }
 
+.listHeader {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.listHeaderCopy {
+  display: grid;
+  gap: 4px;
+  min-width: min(100%, 320px);
+}
+
+.listHeaderTitle {
+  margin: 0;
+  font-size: var(--text-xl);
+  color: var(--text-primary);
+}
+
+.listHeaderDescription {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.listHeaderMeta {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid color-mix(in srgb, var(--brand-500) 20%, var(--border-color));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg-secondary) 94%, transparent);
+  min-width: min(100%, 320px);
+}
+
+.listHeaderMetaItem {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: var(--text-primary);
+}
+
 .summary {
   display: flex;
   flex-wrap: wrap;
@@ -82,6 +124,11 @@
   flex-direction: column;
   gap: var(--space-2);
   max-height: 420px;
+}
+
+.sectionFuture {
+  border-color: color-mix(in srgb, var(--brand-500) 32%, var(--card-border));
+  background: color-mix(in srgb, var(--card-bg) 90%, var(--brand-500) 10%);
 }
 
 .sectionToggle {
@@ -410,6 +457,14 @@
 @media (max-width: 640px) {
   .page {
     gap: var(--space-2);
+  }
+
+  .listHeader {
+    flex-direction: column;
+  }
+
+  .listHeaderMeta {
+    width: 100%;
   }
 
   .filters {

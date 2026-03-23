@@ -1,4 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from 'react'
+import { FiEye, FiEyeOff } from 'react-icons/fi'
 import { PageIntro } from '../../components/molecules/PageIntro/PageIntro'
 import { PageTemplate } from '../../components/templates/PageTemplate/PageTemplate'
 import { Button } from '../../components/ui'
@@ -54,7 +55,7 @@ const MONTH_NAMES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Se
 export const Dashboard = (): JSX.Element => {
   const currentYear = new Date().getFullYear()
   const currentMonth = new Date().getMonth() + 1
-  const [mode, setMode] = useState<DashboardViewMode>('annual')
+  const [mode, setMode] = useState<DashboardViewMode>('monthly')
   const [selectedYear, setSelectedYear] = useState(currentYear)
   const [selectedMonth, setSelectedMonth] = useState(currentMonth)
   const [transactions, setTransactions] = useState<NormalizedTransaction[]>([])
@@ -65,6 +66,7 @@ export const Dashboard = (): JSX.Element => {
   const [businessSettingsFailed, setBusinessSettingsFailed] = useState(false)
   const [isCompanySettingsModalOpen, setIsCompanySettingsModalOpen] = useState(false)
   const [isHelpPanelOpen, setIsHelpPanelOpen] = useState(false)
+  const [isValuesVisible, setIsValuesVisible] = useState(true)
 
   useEffect(() => {
     void (async () => {
@@ -133,11 +135,35 @@ export const Dashboard = (): JSX.Element => {
   const currentTotals = useMemo(() => calculatePeriodTotals(currentPeriodTransactions), [currentPeriodTransactions])
   const previousTotals = useMemo(() => calculatePeriodTotals(previousPeriodTransactions), [previousPeriodTransactions])
 
-  const margin = useMemo(() => calculateMargin(currentTotals.revenue, currentTotals.profit), [currentTotals])
+  const executiveProfitCutoff = useMemo(() => {
+    const cutoff = new Date()
+    cutoff.setHours(23, 59, 59, 999)
+    return cutoff.getTime()
+  }, [])
+
+  const currentExecutiveTransactions = useMemo(
+    () => currentPeriodTransactions.filter((item) => item.parsedDate.getTime() <= executiveProfitCutoff),
+    [currentPeriodTransactions, executiveProfitCutoff]
+  )
+
+  const previousExecutiveTransactions = useMemo(
+    () => previousPeriodTransactions.filter((item) => item.parsedDate.getTime() <= executiveProfitCutoff),
+    [previousPeriodTransactions, executiveProfitCutoff]
+  )
+
+  const executiveCurrentTotals = useMemo(
+    () => calculatePeriodTotals(currentExecutiveTransactions),
+    [currentExecutiveTransactions]
+  )
+
+  const executivePreviousTotals = useMemo(
+    () => calculatePeriodTotals(previousExecutiveTransactions),
+    [previousExecutiveTransactions]
+  )
 
   const profitVariation = useMemo(
-    () => calculateGrowthPercent(currentTotals.profit, previousTotals.profit),
-    [currentTotals.profit, previousTotals.profit]
+    () => calculateGrowthPercent(executiveCurrentTotals.profit, executivePreviousTotals.profit),
+    [executiveCurrentTotals.profit, executivePreviousTotals.profit]
   )
 
   const revenueGrowth = useMemo(
@@ -209,6 +235,11 @@ export const Dashboard = (): JSX.Element => {
 
   const roi = useMemo(() => calculateRoi(accumulatedProfit, investmentAmount), [accumulatedProfit, investmentAmount])
 
+  const executiveMargin = useMemo(
+    () => calculateMargin(currentTotals.revenue, executiveCurrentTotals.profit),
+    [currentTotals.revenue, executiveCurrentTotals.profit]
+  )
+
   const periodLabel = useMemo(() => {
     if (mode === 'annual') {
       return String(selectedYear)
@@ -216,6 +247,14 @@ export const Dashboard = (): JSX.Element => {
 
     return `${MONTH_NAMES[selectedMonth - 1]}/${selectedYear}`
   }, [mode, selectedYear, selectedMonth])
+
+  const withPrivacyMask = (value: string): string => {
+    if (isValuesVisible) {
+      return value
+    }
+
+    return '••••••'
+  }
 
   const isLoading = isTransactionsLoading || isBusinessLoading
 
@@ -236,6 +275,18 @@ export const Dashboard = (): JSX.Element => {
       <PageIntro
         title="Dashboard Executiva"
         description="Crescimento, margem, ROI, tendencia e analise mensal/ anual em uma unica visao."
+        action={
+          <Button
+            type="button"
+            variant="ghost"
+            className={styles.valueVisibilityButton}
+            onClick={() => setIsValuesVisible((prev) => !prev)}
+            aria-label={isValuesVisible ? 'Ocultar valores da dashboard' : 'Mostrar valores da dashboard'}
+          >
+            {isValuesVisible ? <FiEye /> : <FiEyeOff />}
+            {isValuesVisible ? 'Ocultar valores' : 'Mostrar valores'}
+          </Button>
+        }
       />
 
       <DashboardFilters
@@ -261,11 +312,11 @@ export const Dashboard = (): JSX.Element => {
         <div className={styles.layout}>
           <SectionContainer title="Resumo executivo" description={`Periodo selecionado: ${periodLabel}`}>
             <ExecutiveCards
-              revenue={formatCurrency(currentTotals.revenue)}
-              expense={formatCurrency(currentTotals.expense)}
-              profit={formatCurrency(currentTotals.profit)}
-              margin={formatPercent(margin)}
-              variation={formatPercent(profitVariation)}
+              revenue={withPrivacyMask(formatCurrency(currentTotals.revenue))}
+              expense={withPrivacyMask(formatCurrency(currentTotals.expense))}
+              profit={withPrivacyMask(formatCurrency(executiveCurrentTotals.profit))}
+              margin={withPrivacyMask(formatPercent(executiveMargin))}
+              variation={withPrivacyMask(formatPercent(profitVariation))}
               variationPositive={(profitVariation ?? 0) >= 0}
             />
           </SectionContainer>
@@ -290,9 +341,9 @@ export const Dashboard = (): JSX.Element => {
 
           <SectionContainer title="Indicadores de saude" description="Metricas de performance operacional.">
             <HealthIndicators
-              averageProfitLast3={formatCurrency(healthSnapshot.averageProfitLast3)}
-              revenueGrowth={formatPercent(healthSnapshot.revenueGrowth)}
-              expenseGrowth={formatPercent(healthSnapshot.expenseGrowth)}
+              averageProfitLast3={withPrivacyMask(formatCurrency(healthSnapshot.averageProfitLast3))}
+              revenueGrowth={withPrivacyMask(formatPercent(healthSnapshot.revenueGrowth))}
+              expenseGrowth={withPrivacyMask(formatPercent(healthSnapshot.expenseGrowth))}
               trend={healthSnapshot.trend}
               expenseGrowingFaster={
                 healthSnapshot.expenseGrowingFaster === null ? 'N/D' : healthSnapshot.expenseGrowingFaster ? 'Sim' : 'Nao'
@@ -321,14 +372,14 @@ export const Dashboard = (): JSX.Element => {
               ) : null}
 
               <RoiSection
-                accumulatedProfit={formatCurrency(accumulatedProfit)}
-                roi={formatPercent(roi)}
+                accumulatedProfit={withPrivacyMask(formatCurrency(accumulatedProfit))}
+                roi={withPrivacyMask(formatPercent(roi))}
                 investmentConfigured={investmentAmount !== null}
               />
             </SectionContainer>
 
             <SectionContainer title="Tendencia e direcao" description="Leitura rapida de aceleracao ou desaceleracao.">
-              <TrendIndicators variation={profitVariation} trend={healthSnapshot.trend} />
+              <TrendIndicators variation={profitVariation} trend={healthSnapshot.trend} valuesVisible={isValuesVisible} />
             </SectionContainer>
           </div>
         </div>

@@ -37,7 +37,16 @@ const mockedSaveCategory = jest.mocked(financeService.saveCategory)
 const mockedUpdateCategory = jest.mocked(financeService.updateCategory)
 const mockedDeleteCategory = jest.mocked(financeService.deleteCategory)
 
-const findSectionByTitle = (title: 'Entradas' | 'Saidas'): HTMLElement => {
+const getCurrentMonthDate = (day: number): string => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const formattedDay = String(day).padStart(2, '0')
+
+  return `${year}-${month}-${formattedDay}`
+}
+
+const findSectionByTitle = (title: string | RegExp): HTMLElement => {
   return screen.getByRole('heading', { name: title }).closest('section') as HTMLElement
 }
 
@@ -74,7 +83,7 @@ describe('Report', () => {
         amount: 2000,
         category: 'Salario',
         description: 'Pagamento',
-        date: '2026-02-20',
+        date: getCurrentMonthDate(20),
         isMonthlyCost: false
       },
       {
@@ -83,7 +92,7 @@ describe('Report', () => {
         amount: 120,
         category: 'Mercado',
         description: 'Compras',
-        date: '2026-02-19',
+        date: getCurrentMonthDate(19),
         isMonthlyCost: true
       }
     ])
@@ -127,16 +136,97 @@ describe('Report', () => {
     })
   })
 
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
   it('carrega e renderiza entradas e saidas', async () => {
     render(<Report />)
 
     await waitFor(() => {
       expect(screen.getByText('Entradas')).toBeInTheDocument()
-      expect(screen.getByText('Saidas')).toBeInTheDocument()
+      expect(screen.getByText(/^Sa.*das$/)).toBeInTheDocument()
     })
 
     expect(screen.getAllByText('Salario').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Mercado').length).toBeGreaterThan(0)
+  })
+
+  it('inicia no mes atual e separa lancamentos futuros', async () => {
+    jest.useFakeTimers()
+    jest.setSystemTime(new Date('2026-03-20T12:00:00-03:00'))
+    mockedGetTransactions.mockResolvedValue([
+      {
+        id: '1',
+        type: 'entrada',
+        amount: 2000,
+        category: 'Salario',
+        description: 'Pagamento realizado',
+        date: getCurrentMonthDate(5),
+        isMonthlyCost: false
+      },
+      {
+        id: '2',
+        type: 'saida',
+        amount: 120,
+        category: 'Mercado',
+        description: 'Compras realizadas',
+        date: getCurrentMonthDate(10),
+        isMonthlyCost: true
+      },
+      {
+        id: '3',
+        type: 'entrada',
+        amount: 500,
+        category: 'Salario',
+        description: 'Receita futura',
+        date: getCurrentMonthDate(25),
+        isMonthlyCost: false
+      },
+      {
+        id: '4',
+        type: 'saida',
+        amount: 80,
+        category: 'Mercado',
+        description: 'Despesa futura',
+        date: getCurrentMonthDate(28),
+        isMonthlyCost: false
+      }
+    ])
+
+    render(<Report />)
+
+    expect(screen.getByLabelText('Ano')).toHaveValue('2026')
+    expect(screen.getByLabelText('Mes')).toHaveValue('03')
+
+    await screen.findByText('Entradas')
+
+    const entriesSection = findSectionByTitle('Entradas')
+    const outcomesSection = findSectionByTitle(/^Sa.*das$/)
+    const futureEntriesSection = findSectionByTitle('Entradas futuras')
+    const futureOutcomesSection = findSectionByTitle(/^Sa.*das futuras$/)
+
+    expect(within(entriesSection).getAllByText('Pagamento realizado').length).toBeGreaterThan(0)
+    expect(within(entriesSection).queryAllByText('Receita futura')).toHaveLength(0)
+    expect(within(outcomesSection).getAllByText('Compras realizadas').length).toBeGreaterThan(0)
+    expect(within(outcomesSection).queryAllByText('Despesa futura')).toHaveLength(0)
+
+    expect(within(futureEntriesSection).getAllByText('Receita futura').length).toBeGreaterThan(0)
+    expect(within(futureOutcomesSection).getAllByText('Despesa futura').length).toBeGreaterThan(0)
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.classList.contains('listHeaderMetaItem') &&
+          (element.textContent?.includes('Última entrada: 05/03/2026') ?? false)
+      )
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.classList.contains('listHeaderMetaItem') &&
+          (element.textContent?.includes('Última saída: 10/03/2026') ?? false)
+      )
+    ).toBeInTheDocument()
   })
 
   it('apaga transacao', async () => {
@@ -361,3 +451,9 @@ describe('Report', () => {
     await screen.findByText('Nao foi possivel excluir a categoria.')
   })
 })
+
+
+
+
+
+
