@@ -13,7 +13,10 @@ interface TransactionsTableProps {
   onDelete: (id: string) => Promise<void>
   onEditStart: (transaction: Transaction) => void
   onEditCancel: () => void
-  onEditChange: (field: 'date' | 'category' | 'description' | 'amount' | 'isMonthlyCost', value: string | boolean) => void
+  onEditChange: (
+    field: 'date' | 'category' | 'description' | 'amount' | 'isMonthlyCost' | 'paymentMethod',
+    value: string | boolean
+  ) => void
   onEditSave: () => Promise<void>
   deletingId: string | null
   editingId: string | null
@@ -74,6 +77,13 @@ export const TransactionsTable = ({
     }
 
     return transaction.isMonthlyCost ? 'Sim' : 'Nao'
+  }
+
+  const formatPaymentMethod = (value: Transaction['paymentMethod']): string => {
+    if (value === 'credito') return 'Credito'
+    if (value === 'debito') return 'Debito'
+    if (value === 'dinheiro') return 'Dinheiro'
+    return 'Pix'
   }
 
   const renderActions = (transaction: Transaction, isEditing: boolean): JSX.Element => {
@@ -153,6 +163,8 @@ export const TransactionsTable = ({
                 <col className={styles.colCategory} />
                 <col className={styles.colDescription} />
                 <col className={styles.colValue} />
+                <col className={styles.colPaymentMethod} />
+                <col className={styles.colInstallment} />
                 <col className={styles.colMonthlyCost} />
                 <col className={styles.colActions} />
               </colgroup>
@@ -162,6 +174,8 @@ export const TransactionsTable = ({
                   <th>Categoria</th>
                   <th>Descricao</th>
                   <th>Valor</th>
+                  <th>Pagamento</th>
+                  <th>Parcela</th>
                   <th>Custo mensal</th>
                   <th>Acoes</th>
                 </tr>
@@ -227,6 +241,23 @@ export const TransactionsTable = ({
                           formatCurrency(transaction.amount)
                         )}
                       </td>
+                      <td>
+                        {isEditing ? (
+                          <select
+                            className={styles.cellInput}
+                            value={editingDraft.paymentMethod}
+                            onChange={(event) => onEditChange('paymentMethod', event.target.value)}
+                          >
+                            <option value="pix">Pix</option>
+                            <option value="debito">Debito</option>
+                            <option value="dinheiro">Dinheiro</option>
+                            <option value="credito">Credito</option>
+                          </select>
+                        ) : (
+                          formatPaymentMethod(transaction.paymentMethod)
+                        )}
+                      </td>
+                      <td>{transaction.installmentCount > 1 ? `${transaction.installmentNumber}/${transaction.installmentCount}` : '-'}</td>
                       <td>{getMonthlyCostValue(transaction, isEditing)}</td>
                       <td className={styles.actionsCell}>{renderActions(transaction, isEditing)}</td>
                     </tr>
@@ -307,6 +338,31 @@ export const TransactionsTable = ({
                       ) : (
                         formatCurrency(transaction.amount)
                       )}
+                    </div>
+                  </div>
+                  <div className={styles.mobileRow}>
+                    <span className={styles.mobileLabel}>Pagamento</span>
+                    <div className={styles.mobileValue}>
+                      {isEditing ? (
+                        <select
+                          className={styles.cellInput}
+                          value={editingDraft.paymentMethod}
+                          onChange={(event) => onEditChange('paymentMethod', event.target.value)}
+                        >
+                          <option value="pix">Pix</option>
+                          <option value="debito">Debito</option>
+                          <option value="dinheiro">Dinheiro</option>
+                          <option value="credito">Credito</option>
+                        </select>
+                      ) : (
+                        formatPaymentMethod(transaction.paymentMethod)
+                      )}
+                    </div>
+                  </div>
+                  <div className={styles.mobileRow}>
+                    <span className={styles.mobileLabel}>Parcela</span>
+                    <div className={styles.mobileValue}>
+                      {transaction.installmentCount > 1 ? `${transaction.installmentNumber}/${transaction.installmentCount}` : '-'}
                     </div>
                   </div>
                   <div className={styles.mobileRow}>

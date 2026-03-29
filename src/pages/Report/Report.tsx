@@ -5,7 +5,7 @@ import { PageTemplate } from '../../components/templates/PageTemplate/PageTempla
 import { useAuth } from '../../contexts/AuthContext'
 import { financeService, type CategoryItem } from '../../services/finance.service'
 import type { ExportReportPdfPayload } from '../../types/report-export.types'
-import type { Transaction, TransactionType } from '../../types/transaction.types'
+import type { PaymentMethod, Transaction, TransactionType } from '../../types/transaction.types'
 import { PageHeader } from './components/PageHeader'
 import { ReportFilters } from './components/ReportFilters'
 import { ReportSummary } from './components/ReportSummary'
@@ -20,6 +20,8 @@ interface CreateFormState {
   category: string
   description: string
   isMonthlyCost: boolean
+  paymentMethod: PaymentMethod
+  installmentCount: number
 }
 
 interface ExportFormState {
@@ -76,7 +78,9 @@ const initialCreateFormState: CreateFormState = {
   date: getTodayDate(),
   category: '',
   description: '',
-  isMonthlyCost: false
+  isMonthlyCost: false,
+  paymentMethod: 'pix',
+  installmentCount: 1
 }
 
 const initialExportFormState: ExportFormState = {
@@ -88,6 +92,28 @@ const initialExportFormState: ExportFormState = {
 }
 
 const normalizeCategoryValue = (value: string): string => value.trim().replace(/\s+/g, ' ')
+
+const addMonthsKeepingDay = (baseDate: Date, monthOffset: number): Date => {
+  const year = baseDate.getFullYear()
+  const month = baseDate.getMonth()
+  const day = baseDate.getDate()
+  const targetFirstDay = new Date(year, month + monthOffset, 1)
+  const lastDay = new Date(targetFirstDay.getFullYear(), targetFirstDay.getMonth() + 1, 0).getDate()
+  return new Date(targetFirstDay.getFullYear(), targetFirstDay.getMonth(), Math.min(day, lastDay))
+}
+
+const splitAmountIntoInstallments = (totalAmount: number, count: number): number[] => {
+  const totalInCents = Math.round(totalAmount * 100)
+  const base = Math.floor(totalInCents / count)
+  const remainder = totalInCents - base * count
+  const result = Array.from({ length: count }, () => base)
+
+  for (let i = 0; i < remainder; i += 1) {
+    result[i] += 1
+  }
+
+  return result.map((item) => item / 100)
+}
 
 const getSortableDateValue = (value: string): number => {
   const iso = value.match(/^\d{4}-\d{2}-\d{2}/)?.[0]
@@ -401,6 +427,10 @@ export const Report = (): JSX.Element => {
   const futureOutcomes = useMemo(() => futureTransactions.filter((item) => item.type === 'saida'), [futureTransactions])
   const totalEntries = useMemo(() => entries.reduce((acc, item) => acc + item.amount, 0), [entries])
   const totalOutcomes = useMemo(() => outcomes.reduce((acc, item) => acc + item.amount, 0), [outcomes])
+  const totalInstallments = useMemo(
+    () => outcomes.filter((item) => item.installmentCount > 1).reduce((acc, item) => acc + item.amount, 0),
+    [outcomes]
+  )
   const resultBalance = useMemo(() => totalEntries - totalOutcomes, [totalEntries, totalOutcomes])
   const lastEntryDate = useMemo(() => getLatestTransactionDate(mainTransactions, 'entrada'), [mainTransactions])
   const lastOutcomeDate = useMemo(() => getLatestTransactionDate(mainTransactions, 'saida'), [mainTransactions])
@@ -410,7 +440,7 @@ export const Report = (): JSX.Element => {
 
     try {
       await financeService.deleteTransaction(id)
-      setTransactions((prev) => prev.filter((item) => item.id !== id))
+      await loadTransactions()
       if (editingId === id) {
         setEditingId(null)
         setEditingDraft(null)
@@ -438,7 +468,7 @@ export const Report = (): JSX.Element => {
   }
 
   const handleEditChange = (
-    field: 'date' | 'category' | 'description' | 'amount' | 'isMonthlyCost',
+    field: 'date' | 'category' | 'description' | 'amount' | 'isMonthlyCost' | 'paymentMethod',
     value: string | boolean
   ): void => {
     if (!editingDraft) return
@@ -453,6 +483,19 @@ export const Report = (): JSX.Element => {
       setEditingDraft({
         ...editingDraft,
         isMonthlyCost: editingDraft.type === 'saida' ? Boolean(value) : false
+      })
+      return
+    }
+
+    if (field === 'paymentMethod') {
+      const paymentMethod = value as PaymentMethod
+      setEditingDraft({
+        ...editingDraft,
+        paymentMethod,
+        installmentCount: paymentMethod === 'credito' ? editingDraft.installmentCount : 1,
+        installmentNumber: paymentMethod === 'credito' ? editingDraft.installmentNumber : 1,
+        installmentGroupId: paymentMethod === 'credito' && editingDraft.installmentCount > 1 ? editingDraft.installmentGroupId : null,
+        isInstallment: paymentMethod === 'credito' && editingDraft.installmentCount > 1
       })
       return
     }
@@ -476,7 +519,17 @@ export const Report = (): JSX.Element => {
         ...editingDraft,
         category,
         description: editingDraft.description.trim(),
-        isMonthlyCost: editingDraft.type === 'saida' ? editingDraft.isMonthlyCost : false
+        isMonthlyCost: editingDraft.type === 'saida' ? editingDraft.isMonthlyCost : false,
+        paymentMethod: editingDraft.paymentMethod,
+        installmentCount: editingDraft.paymentMethod === 'credito' ? editingDraft.installmentCount : 1,
+        installmentNumber: editingDraft.paymentMethod === 'credito' ? editingDraft.installmentNumber : 1,
+        installmentGroupId:
+          editingDraft.paymentMethod === 'credito' && editingDraft.installmentCount > 1 ? editingDraft.installmentGroupId : null,
+        isInstallment: editingDraft.paymentMethod === 'credito' && editingDraft.installmentCount > 1,
+        totalAmount:
+          editingDraft.paymentMethod === 'credito' && editingDraft.installmentCount > 1
+            ? editingDraft.totalAmount
+            : editingDraft.amount
       }
 
       await financeService.saveCategory(category, safeDraft.type)
@@ -516,22 +569,49 @@ export const Report = (): JSX.Element => {
       setCreateFeedback('Informe a descricao da transacao.')
       return
     }
-
-    const transaction: Transaction = {
-      id: crypto.randomUUID(),
-      type: createForm.type,
-      amount: parsedAmount,
-      date: createForm.date,
-      category,
-      description,
-      isMonthlyCost: createForm.type === 'saida' ? createForm.isMonthlyCost : false
+    const installmentCount = createForm.paymentMethod === 'credito' ? createForm.installmentCount : 1
+    if (!Number.isInteger(installmentCount) || installmentCount < 1 || installmentCount > 48) {
+      setCreateFeedback('Informe uma quantidade de parcelas entre 1 e 48.')
+      return
     }
+
+    const firstDate = new Date(createForm.date)
+    if (Number.isNaN(firstDate.getTime())) {
+      setCreateFeedback('Informe uma data valida.')
+      return
+    }
+
+    const isInstallment = createForm.paymentMethod === 'credito' && installmentCount > 1
+    const amounts = isInstallment ? splitAmountIntoInstallments(parsedAmount, installmentCount) : [parsedAmount]
+    const installmentGroupId = isInstallment ? crypto.randomUUID() : null
+    const transactionsToCreate: Transaction[] = amounts.map((amount, index) => {
+      const date = isInstallment ? addMonthsKeepingDay(firstDate, index) : firstDate
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+
+      return {
+        id: crypto.randomUUID(),
+        type: createForm.type,
+        amount,
+        date: `${year}-${month}-${day}`,
+        category,
+        description,
+        isMonthlyCost: createForm.type === 'saida' ? createForm.isMonthlyCost && !isInstallment : false,
+        paymentMethod: createForm.paymentMethod,
+        installmentGroupId,
+        installmentNumber: isInstallment ? index + 1 : 1,
+        installmentCount,
+        totalAmount: parsedAmount,
+        isInstallment
+      }
+    })
 
     setIsCreating(true)
     setCreateFeedback('')
 
     try {
-      await financeService.saveTransaction(transaction)
+      await financeService.saveTransactions(transactionsToCreate)
       await financeService.saveCategory(category, createForm.type)
       await Promise.all([loadTransactions(), loadCategories()])
       setCreateForm(initialCreateFormState)
@@ -732,7 +812,12 @@ export const Report = (): JSX.Element => {
 
       {!isLoading && !error && (
         <>
-          <ReportSummary totalEntries={totalEntries} totalOutcomes={totalOutcomes} formatCurrency={formatCurrency} />
+          <ReportSummary
+            totalEntries={totalEntries}
+            totalOutcomes={totalOutcomes}
+            totalInstallments={totalInstallments}
+            formatCurrency={formatCurrency}
+          />
 
           <div className={styles.listHeader}>
             <div className={styles.listHeaderCopy}>
@@ -967,7 +1052,10 @@ export const Report = (): JSX.Element => {
                   ...prev,
                   type: event.target.value as Transaction['type'],
                   category: '',
-                  isMonthlyCost: event.target.value === 'saida' ? prev.isMonthlyCost : false
+                  isMonthlyCost: event.target.value === 'saida' ? prev.isMonthlyCost : false,
+                  paymentMethod: event.target.value === 'saida' ? prev.paymentMethod : 'pix',
+                  installmentCount:
+                    event.target.value === 'saida' && prev.paymentMethod === 'credito' ? prev.installmentCount : 1
                 }))
               }
             >
@@ -1018,6 +1106,44 @@ export const Report = (): JSX.Element => {
               ))}
             </select>
           </label>
+
+          <label className={styles.createField}>
+            <span>Forma de pagamento</span>
+            <select
+              value={createForm.paymentMethod}
+              onChange={(event) =>
+                setCreateForm((prev) => ({
+                  ...prev,
+                  paymentMethod: event.target.value as PaymentMethod,
+                  installmentCount: event.target.value === 'credito' ? prev.installmentCount : 1
+                }))
+              }
+            >
+              <option value="pix">Pix</option>
+              <option value="debito">Debito</option>
+              <option value="dinheiro">Dinheiro</option>
+              <option value="credito">Credito</option>
+            </select>
+          </label>
+
+          {createForm.paymentMethod === 'credito' ? (
+            <label className={styles.createField}>
+              <span>Parcelas</span>
+              <input
+                type="number"
+                min="1"
+                max="48"
+                step="1"
+                value={String(createForm.installmentCount)}
+                onChange={(event) =>
+                  setCreateForm((prev) => ({
+                    ...prev,
+                    installmentCount: Math.max(1, Math.min(48, Number(event.target.value) || 1))
+                  }))
+                }
+              />
+            </label>
+          ) : null}
 
           <label className={`${styles.createField} ${styles.createFieldFull}`}>
             <span>Descricao</span>

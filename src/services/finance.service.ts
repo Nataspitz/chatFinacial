@@ -1,9 +1,10 @@
 import type { ExportReportPdfPayload, ExportReportPdfResult } from '../types/report-export.types'
-import type { Transaction, TransactionType } from '../types/transaction.types'
+import type { PaymentMethod, Transaction, TransactionType } from '../types/transaction.types'
 import { supabase } from '../lib/supabase'
 
 interface FinanceService {
   saveTransaction: (transaction: Transaction) => Promise<void>
+  saveTransactions: (transactions: Transaction[]) => Promise<void>
   getTransactions: () => Promise<Transaction[]>
   deleteTransaction: (id: string) => Promise<void>
   updateTransaction: (transaction: Transaction) => Promise<void>
@@ -24,6 +25,12 @@ interface TransactionRow {
   description: string
   date: string
   is_monthly_cost: boolean
+  payment_method: PaymentMethod | null
+  installment_group_id: string | null
+  installment_number: number | null
+  installment_count: number | null
+  total_amount: number | null
+  is_installment: boolean | null
 }
 
 interface CategoryRow {
@@ -45,7 +52,13 @@ const toTransaction = (row: TransactionRow): Transaction => ({
   amount: Number(row.amount),
   description: row.description,
   date: row.date,
-  isMonthlyCost: Boolean(row.is_monthly_cost)
+  isMonthlyCost: Boolean(row.is_monthly_cost),
+  paymentMethod: row.payment_method ?? 'pix',
+  installmentGroupId: row.installment_group_id,
+  installmentNumber: row.installment_number ?? 1,
+  installmentCount: row.installment_count ?? 1,
+  totalAmount: Number(row.total_amount ?? row.amount),
+  isInstallment: Boolean(row.is_installment ?? (row.installment_count ?? 1) > 1)
 })
 
 const normalizeDateValue = (value: string): string => {
@@ -81,19 +94,51 @@ export const financeService: FinanceService = {
       amount: transaction.amount,
       description: transaction.description,
       date: normalizeDateValue(transaction.date),
-      is_monthly_cost: transaction.type === 'saida' ? Boolean(transaction.isMonthlyCost) : false
+      is_monthly_cost: transaction.type === 'saida' ? Boolean(transaction.isMonthlyCost) : false,
+      payment_method: transaction.paymentMethod,
+      installment_group_id: transaction.installmentGroupId,
+      installment_number: transaction.installmentNumber,
+      installment_count: transaction.installmentCount,
+      total_amount: transaction.totalAmount,
+      is_installment: transaction.isInstallment
     })
 
     if (error) {
       throw error
     }
   },
+  saveTransactions: async (transactions: Transaction[]): Promise<void> => {
+    if (transactions.length === 0) return
+    const userId = await getAuthenticatedUserId()
+
+    const rows = transactions.map((transaction) => ({
+      id: transaction.id,
+      user_id: userId,
+      type: transaction.type,
+      category: transaction.category,
+      amount: transaction.amount,
+      description: transaction.description,
+      date: normalizeDateValue(transaction.date),
+      is_monthly_cost: transaction.type === 'saida' ? Boolean(transaction.isMonthlyCost) : false,
+      payment_method: transaction.paymentMethod,
+      installment_group_id: transaction.installmentGroupId,
+      installment_number: transaction.installmentNumber,
+      installment_count: transaction.installmentCount,
+      total_amount: transaction.totalAmount,
+      is_installment: transaction.isInstallment
+    }))
+
+    const { error } = await supabase.from('transactions').insert(rows)
+    if (error) throw error
+  },
   getTransactions: async (): Promise<Transaction[]> => {
     await getAuthenticatedUserId()
 
     const { data, error } = await supabase
       .from('transactions')
-      .select('id, user_id, type, category, amount, description, date, is_monthly_cost')
+      .select(
+        'id, user_id, type, category, amount, description, date, is_monthly_cost, payment_method, installment_group_id, installment_number, installment_count, total_amount, is_installment'
+      )
       .order('date', { ascending: false })
 
     if (error) {
@@ -105,7 +150,14 @@ export const financeService: FinanceService = {
   deleteTransaction: async (id: string): Promise<void> => {
     await getAuthenticatedUserId()
 
-    const { error } = await supabase.from('transactions').delete().eq('id', id)
+    const { data, error: fetchError } = await supabase.from('transactions').select('installment_group_id').eq('id', id).maybeSingle()
+    if (fetchError) {
+      throw fetchError
+    }
+
+    const groupId = data?.installment_group_id ?? null
+    const query = groupId ? supabase.from('transactions').delete().eq('installment_group_id', groupId) : supabase.from('transactions').delete().eq('id', id)
+    const { error } = await query
     if (error) {
       throw error
     }
@@ -121,7 +173,13 @@ export const financeService: FinanceService = {
         amount: transaction.amount,
         description: transaction.description,
         date: normalizeDateValue(transaction.date),
-        is_monthly_cost: transaction.type === 'saida' ? Boolean(transaction.isMonthlyCost) : false
+        is_monthly_cost: transaction.type === 'saida' ? Boolean(transaction.isMonthlyCost) : false,
+        payment_method: transaction.paymentMethod,
+        installment_group_id: transaction.installmentGroupId,
+        installment_number: transaction.installmentNumber,
+        installment_count: transaction.installmentCount,
+        total_amount: transaction.totalAmount,
+        is_installment: transaction.isInstallment
       })
       .eq('id', transaction.id)
 

@@ -1,6 +1,6 @@
 {
   "name": "chatfinacial",
-  "version": "0.1.1",
+  "version": "1.2.0",
   "private": true,
   "description": "Desktop app base with Electron + React + Vite + TypeScript",
   "main": "dist-electron/main.js",

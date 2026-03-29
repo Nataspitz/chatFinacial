@@ -261,15 +261,23 @@
 }
 
 .colValue {
+  width: 10%;
+}
+
+.colPaymentMethod {
   width: 11%;
 }
 
+.colInstallment {
+  width: 9%;
+}
+
 .colMonthlyCost {
-  width: 14%;
+  width: 10%;
 }
 
 .colActions {
-  width: 25%;
+  width: 22%;
 }
 
 .empty {

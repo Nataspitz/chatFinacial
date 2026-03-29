@@ -1,4 +1,5 @@
 export type TransactionType = 'entrada' | 'saida'
+export type PaymentMethod = 'credito' | 'debito' | 'pix' | 'dinheiro'
 
 export interface Transaction {
   id: string
@@ -8,4 +9,10 @@ export interface Transaction {
   description: string
   date: string
   isMonthlyCost: boolean
+  paymentMethod: PaymentMethod
+  installmentGroupId: string | null
+  installmentNumber: number
+  installmentCount: number
+  totalAmount: number
+  isInstallment: boolean
 }
