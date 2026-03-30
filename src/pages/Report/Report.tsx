@@ -194,6 +194,7 @@ export const Report = (): JSX.Element => {
   const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth)
   const [selectedDay, setSelectedDay] = useState<string>('all')
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deleteCandidate, setDeleteCandidate] = useState<Transaction | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingDraft, setEditingDraft] = useState<Transaction | null>(null)
   const [isSavingEdit, setIsSavingEdit] = useState(false)
@@ -436,6 +437,13 @@ export const Report = (): JSX.Element => {
   const lastOutcomeDate = useMemo(() => getLatestTransactionDate(mainTransactions, 'saida'), [mainTransactions])
 
   const handleDelete = async (id: string): Promise<void> => {
+    const transaction = transactions.find((item) => item.id === id) ?? null
+    setDeleteCandidate(transaction)
+  }
+
+  const handleConfirmDelete = async (): Promise<void> => {
+    if (!deleteCandidate) return
+    const id = deleteCandidate.id
     setDeletingId(id)
 
     try {
@@ -445,6 +453,7 @@ export const Report = (): JSX.Element => {
         setEditingId(null)
         setEditingDraft(null)
       }
+      setDeleteCandidate(null)
       setError('')
     } catch {
       setError('Nao foi possivel apagar a transacao.')
@@ -913,6 +922,47 @@ export const Report = (): JSX.Element => {
           <ResultFooter resultBalance={resultBalance} formatCurrency={formatCurrency} />
         </>
       )}
+
+      <ModalBase
+        open={deleteCandidate !== null}
+        title="Confirmar exclusao"
+        onClose={() => {
+          if (deletingId !== null) return
+          setDeleteCandidate(null)
+        }}
+      >
+        <div className={styles.confirmDeleteContent}>
+          <p>
+            Deseja apagar esta transacao?
+          </p>
+          {deleteCandidate?.installmentCount && deleteCandidate.installmentCount > 1 ? (
+            <p className={styles.confirmDeleteWarning}>
+              Esta transacao faz parte de um parcelamento. Ao confirmar, todas as parcelas desse grupo serao apagadas.
+            </p>
+          ) : null}
+
+          <div className={styles.createActions}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setDeleteCandidate(null)}
+              disabled={deletingId !== null}
+            >
+              Cancelar
+            </Button>
+            <ButtonLoading
+              type="button"
+              variant="danger"
+              loading={deletingId !== null}
+              onClick={() => {
+                void handleConfirmDelete()
+              }}
+            >
+              Confirmar exclusao
+            </ButtonLoading>
+          </div>
+        </div>
+      </ModalBase>
 
       <ModalBase
         open={isExportModalOpen}

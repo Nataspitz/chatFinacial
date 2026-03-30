@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FiChevronDown, FiChevronUp, FiEdit2 } from 'react-icons/fi'
+import { FiChevronDown, FiChevronUp, FiEdit2, FiTrash2 } from 'react-icons/fi'
 import { Button, ButtonLoading } from '../../../components/ui'
 import { ContentCard } from '../../../components/organisms/ContentCard/ContentCard'
 import type { Transaction } from '../../../types/transaction.types'
@@ -119,22 +119,26 @@ export const TransactionsTable = ({
         <Button
           type="button"
           variant="secondary"
-          className={styles.actionButton}
+          className={styles.iconActionButton}
           disabled={deletingId === transaction.id}
+          aria-label="Editar transacao"
+          title="Editar transacao"
           onClick={() => onEditStart(transaction)}
         >
-          Editar
+          <FiEdit2 />
         </Button>
         <ButtonLoading
           type="button"
           variant="danger"
-          className={styles.actionButton}
+          className={styles.iconActionButton}
           loading={deletingId === transaction.id}
+          aria-label="Apagar transacao"
+          title="Apagar transacao"
           onClick={() => {
             void onDelete(transaction.id)
           }}
         >
-          Apagar
+          <FiTrash2 />
         </ButtonLoading>
       </div>
     )
