@@ -8,6 +8,8 @@ export interface Transaction {
   amount: number
   description: string
   date: string
+  createdAt?: string
+  isConfirmed: boolean
   isMonthlyCost: boolean
   paymentMethod: PaymentMethod
   installmentGroupId: string | null

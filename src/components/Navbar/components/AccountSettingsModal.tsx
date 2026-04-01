@@ -2,6 +2,7 @@
 import type { User } from '@supabase/supabase-js'
 import { Button, ButtonLoading, ModalBase } from '../../ui'
 import { supabase } from '../../../lib/supabase'
+import { businessService } from '../../../services/business.service'
 import styles from './AccountSettingsModal.module.css'
 
 interface AccountSettingsModalProps {
@@ -45,6 +46,22 @@ export const AccountSettingsModal = ({ open, user, onClose }: AccountSettingsMod
     if (!open) return
     setForm(toInitialForm(user))
     setFeedback('')
+
+    void (async () => {
+      try {
+        const settings = await businessService.getBusinessSettings()
+        setForm((prev) => ({
+          ...prev,
+          investmentBaseAmount:
+            settings.investment_base_amount !== null && settings.investment_base_amount !== undefined
+              ? String(settings.investment_base_amount)
+              : prev.investmentBaseAmount,
+          noInitialInvestment: settings.no_initial_investment
+        }))
+      } catch {
+        // Mantem valores atuais quando configuracoes empresariais nao estiverem acessiveis.
+      }
+    })()
   }, [open, user])
 
   const normalizedCurrency = useMemo(() => form.preferredCurrency.trim().toUpperCase(), [form.preferredCurrency])
@@ -86,6 +103,18 @@ export const AccountSettingsModal = ({ open, user, onClose }: AccountSettingsMod
       investment_base_amount: form.noInitialInvestment ? null : parsedInvestmentBase
     }
 
+    try {
+      await businessService.updateBusinessSettings({
+        investment_base_amount: form.noInitialInvestment ? null : parsedInvestmentBase,
+        no_initial_investment: form.noInitialInvestment
+      })
+    } catch {
+      setFeedbackTone('error')
+      setFeedback('Nao foi possivel salvar as configuracoes empresariais.')
+      setIsSaving(false)
+      return
+    }
+
     const { error } = await supabase.auth.updateUser({ data: payload })
 
     if (error) {
@@ -97,6 +126,7 @@ export const AccountSettingsModal = ({ open, user, onClose }: AccountSettingsMod
 
     setFeedbackTone('success')
     setFeedback('Configuracoes atualizadas com sucesso.')
+    window.dispatchEvent(new CustomEvent('business-settings-updated'))
     setIsSaving(false)
   }
 

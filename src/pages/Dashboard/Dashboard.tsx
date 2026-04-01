@@ -111,6 +111,25 @@ export const Dashboard = (): JSX.Element => {
     })()
   }, [])
 
+  useEffect(() => {
+    const handleBusinessSettingsUpdated = (): void => {
+      void (async () => {
+        try {
+          const settings = await businessService.getBusinessSettings()
+          setBusinessSettings(settings)
+          setBusinessSettingsFailed(false)
+        } catch {
+          // Mantem estado atual quando nao for possivel recarregar.
+        }
+      })()
+    }
+
+    window.addEventListener('business-settings-updated', handleBusinessSettingsUpdated)
+    return () => {
+      window.removeEventListener('business-settings-updated', handleBusinessSettingsUpdated)
+    }
+  }, [])
+
   const availableYears = useMemo(() => {
     const years = Array.from(new Set(transactions.map((item) => item.year))).sort((a, b) => b - a)
     return years.length ? years : [currentYear]
@@ -276,16 +295,18 @@ export const Dashboard = (): JSX.Element => {
         title="Dashboard Executiva"
         description="Crescimento, margem, ROI, tendencia e analise mensal/ anual em uma unica visao."
         action={
-          <Button
-            type="button"
-            variant="ghost"
-            className={styles.valueVisibilityButton}
-            onClick={() => setIsValuesVisible((prev) => !prev)}
-            aria-label={isValuesVisible ? 'Ocultar valores da dashboard' : 'Mostrar valores da dashboard'}
-          >
-            {isValuesVisible ? <FiEye /> : <FiEyeOff />}
-            {isValuesVisible ? 'Ocultar valores' : 'Mostrar valores'}
-          </Button>
+          <div className={styles.headerActions}>
+            <Button
+              type="button"
+              variant="ghost"
+              className={styles.valueVisibilityButton}
+              onClick={() => setIsValuesVisible((prev) => !prev)}
+              aria-label={isValuesVisible ? 'Ocultar valores da dashboard' : 'Mostrar valores da dashboard'}
+            >
+              {isValuesVisible ? <FiEye /> : <FiEyeOff />}
+              {isValuesVisible ? 'Ocultar valores' : 'Mostrar valores'}
+            </Button>
+          </div>
         }
       />
 

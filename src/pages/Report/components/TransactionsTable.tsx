@@ -14,7 +14,7 @@ interface TransactionsTableProps {
   onEditStart: (transaction: Transaction) => void
   onEditCancel: () => void
   onEditChange: (
-    field: 'date' | 'category' | 'description' | 'amount' | 'isMonthlyCost' | 'paymentMethod',
+    field: 'date' | 'category' | 'description' | 'amount' | 'isConfirmed' | 'isMonthlyCost' | 'paymentMethod',
     value: string | boolean
   ) => void
   onEditSave: () => Promise<void>
@@ -77,6 +77,20 @@ export const TransactionsTable = ({
     }
 
     return transaction.isMonthlyCost ? 'Sim' : 'Nao'
+  }
+
+  const getConfirmedValue = (transaction: Transaction, isEditing: boolean): JSX.Element | string => {
+    if (isEditing && editingDraft) {
+      return (
+        <input
+          type="checkbox"
+          checked={editingDraft.isConfirmed}
+          onChange={(event) => onEditChange('isConfirmed', event.target.checked)}
+        />
+      )
+    }
+
+    return transaction.isConfirmed ? 'Sim' : 'Nao'
   }
 
   const formatPaymentMethod = (value: Transaction['paymentMethod']): string => {
@@ -169,6 +183,7 @@ export const TransactionsTable = ({
                 <col className={styles.colValue} />
                 <col className={styles.colPaymentMethod} />
                 <col className={styles.colInstallment} />
+                <col className={styles.colConfirmed} />
                 <col className={styles.colMonthlyCost} />
                 <col className={styles.colActions} />
               </colgroup>
@@ -180,6 +195,7 @@ export const TransactionsTable = ({
                   <th>Valor</th>
                   <th>Pagamento</th>
                   <th>Parcela</th>
+                  <th>Confirmado</th>
                   <th>Custo mensal</th>
                   <th>Acoes</th>
                 </tr>
@@ -262,6 +278,7 @@ export const TransactionsTable = ({
                         )}
                       </td>
                       <td>{transaction.installmentCount > 1 ? `${transaction.installmentNumber}/${transaction.installmentCount}` : '-'}</td>
+                      <td>{getConfirmedValue(transaction, isEditing)}</td>
                       <td>{getMonthlyCostValue(transaction, isEditing)}</td>
                       <td className={styles.actionsCell}>{renderActions(transaction, isEditing)}</td>
                     </tr>
@@ -368,6 +385,10 @@ export const TransactionsTable = ({
                     <div className={styles.mobileValue}>
                       {transaction.installmentCount > 1 ? `${transaction.installmentNumber}/${transaction.installmentCount}` : '-'}
                     </div>
+                  </div>
+                  <div className={styles.mobileRow}>
+                    <span className={styles.mobileLabel}>Confirmado</span>
+                    <div className={styles.mobileValue}>{getConfirmedValue(transaction, isEditing)}</div>
                   </div>
                   <div className={styles.mobileRow}>
                     <span className={styles.mobileLabel}>Custo mensal</span>

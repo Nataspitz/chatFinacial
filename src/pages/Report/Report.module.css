@@ -282,12 +282,16 @@
   width: 9%;
 }
 
+.colConfirmed {
+  width: 8%;
+}
+
 .colMonthlyCost {
   width: 10%;
 }
 
 .colActions {
-  width: 22%;
+  width: 18%;
 }
 
 .empty {

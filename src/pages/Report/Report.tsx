@@ -72,6 +72,15 @@ const isTransactionInFuture = (transaction: Transaction, todayDate: string): boo
   return Boolean(normalizedDate && normalizedDate > todayDate)
 }
 
+const getDefaultConfirmedByDate = (dateValue: string): boolean => {
+  const normalizedDate = normalizeTransactionDate(dateValue)
+  if (!normalizedDate) {
+    return true
+  }
+
+  return normalizedDate <= getTodayDate()
+}
+
 const initialCreateFormState: CreateFormState = {
   type: 'saida',
   amount: '',
@@ -136,37 +145,57 @@ const sortTransactionsByDateAsc = (items: Transaction[]): Transaction[] => {
   return [...items].sort((a, b) => getSortableDateValue(a.date) - getSortableDateValue(b.date))
 }
 
-const shouldIncludeMonthlyCostInPeriod = (
+const buildMonthlyCostForPeriod = (
   transaction: Transaction,
   selectedYear: string,
   selectedMonth: string,
   selectedDay: string
-): boolean => {
+): Transaction | null => {
   if (transaction.type !== 'saida' || !transaction.isMonthlyCost) {
-    return false
+    return null
   }
 
   if (selectedYear === 'all' || selectedMonth === 'all') {
-    return false
+    return null
   }
 
   const normalizedDate = normalizeTransactionDate(transaction.date)
   if (!normalizedDate) {
-    return false
+    return null
   }
 
-  const [year, month, day] = normalizedDate.split('-').map(Number)
+  const [year, month, originalDay] = normalizedDate.split('-').map(Number)
   const targetYear = Number(selectedYear)
   const targetMonth = Number(selectedMonth)
 
   if (!Number.isFinite(targetYear) || !Number.isFinite(targetMonth)) {
-    return false
+    return null
   }
 
   const isAfterStartMonth = targetYear > year || (targetYear === year && targetMonth >= month)
-  const matchDay = selectedDay === 'all' || day === Number(selectedDay)
+  if (!isAfterStartMonth) {
+    return null
+  }
 
-  return isAfterStartMonth && matchDay
+  const lastDayInTargetMonth = new Date(targetYear, targetMonth, 0).getDate()
+  const adjustedDay = Math.min(originalDay, lastDayInTargetMonth)
+  const adjustedDayLabel = String(adjustedDay).padStart(2, '0')
+  const targetMonthLabel = String(targetMonth).padStart(2, '0')
+  const targetDate = `${selectedYear}-${targetMonthLabel}-${adjustedDayLabel}`
+  const matchDay = selectedDay === 'all' || adjustedDay === Number(selectedDay)
+
+  if (!matchDay) {
+    return null
+  }
+
+  const isGeneratedOccurrence = targetDate !== normalizedDate
+  const isConfirmed = isGeneratedOccurrence ? Boolean(transaction.isConfirmed) && getDefaultConfirmedByDate(targetDate) : transaction.isConfirmed
+
+  return {
+    ...transaction,
+    date: targetDate,
+    isConfirmed
+  }
 }
 
 const MONTH_LABELS: Record<string, string> = {
@@ -284,10 +313,10 @@ export const Report = (): JSX.Element => {
   }, [transactions])
 
   const filteredTransactions = useMemo(() => {
-    return transactions.filter((item) => {
+    return transactions.flatMap((item) => {
       const normalizedDate = normalizeTransactionDate(item.date)
       if (!normalizedDate) {
-        return false
+        return []
       }
 
       const [year, month, day] = normalizedDate.split('-')
@@ -296,10 +325,11 @@ export const Report = (): JSX.Element => {
       const matchDay = selectedDay === 'all' || day === selectedDay
 
       if (matchYear && matchMonth && matchDay) {
-        return true
+        return [item]
       }
 
-      return shouldIncludeMonthlyCostInPeriod(item, selectedYear, selectedMonth, selectedDay)
+      const monthlyCostInPeriod = buildMonthlyCostForPeriod(item, selectedYear, selectedMonth, selectedDay)
+      return monthlyCostInPeriod ? [monthlyCostInPeriod] : []
     })
   }, [selectedDay, selectedMonth, selectedYear, transactions])
 
@@ -346,31 +376,33 @@ export const Report = (): JSX.Element => {
   }, [exportDayOptions, exportForm.day])
 
   const exportTransactions = useMemo(() => {
-    return transactions.filter((item) => {
+    return transactions.flatMap((item) => {
       const normalizedDate = normalizeTransactionDate(item.date)
       if (!normalizedDate) {
-        return false
+        return []
       }
 
       const [year, month, day] = normalizedDate.split('-')
 
       if (exportForm.periodType === 'year') {
-        return year === exportForm.year
+        return year === exportForm.year ? [item] : []
       }
 
       if (exportForm.periodType === 'month') {
         if (year === exportForm.year && month === exportForm.month) {
-          return true
+          return [item]
         }
 
-        return shouldIncludeMonthlyCostInPeriod(item, exportForm.year, exportForm.month, 'all')
+        const monthlyCostInPeriod = buildMonthlyCostForPeriod(item, exportForm.year, exportForm.month, 'all')
+        return monthlyCostInPeriod ? [monthlyCostInPeriod] : []
       }
 
       if (year === exportForm.year && month === exportForm.month && day === exportForm.day) {
-        return true
+        return [item]
       }
 
-      return shouldIncludeMonthlyCostInPeriod(item, exportForm.year, exportForm.month, exportForm.day)
+      const monthlyCostInPeriod = buildMonthlyCostForPeriod(item, exportForm.year, exportForm.month, exportForm.day)
+      return monthlyCostInPeriod ? [monthlyCostInPeriod] : []
     })
   }, [exportForm.day, exportForm.month, exportForm.periodType, exportForm.year, transactions])
 
@@ -393,11 +425,11 @@ export const Report = (): JSX.Element => {
   }
 
   const mainTransactions = useMemo(
-    () => filteredTransactions.filter((item) => !isTransactionInFuture(item, todayDate)),
+    () => filteredTransactions.filter((item) => item.isConfirmed || !isTransactionInFuture(item, todayDate)),
     [filteredTransactions, todayDate]
   )
   const futureTransactions = useMemo(
-    () => filteredTransactions.filter((item) => isTransactionInFuture(item, todayDate)),
+    () => filteredTransactions.filter((item) => !item.isConfirmed && isTransactionInFuture(item, todayDate)),
     [filteredTransactions, todayDate]
   )
 
@@ -466,6 +498,7 @@ export const Report = (): JSX.Element => {
     setEditingId(transaction.id)
     setEditingDraft({
       ...transaction,
+      isConfirmed: Boolean(transaction.isConfirmed),
       isMonthlyCost: transaction.type === 'saida' ? Boolean(transaction.isMonthlyCost) : false
     })
     setError('')
@@ -477,7 +510,7 @@ export const Report = (): JSX.Element => {
   }
 
   const handleEditChange = (
-    field: 'date' | 'category' | 'description' | 'amount' | 'isMonthlyCost' | 'paymentMethod',
+    field: 'date' | 'category' | 'description' | 'amount' | 'isConfirmed' | 'isMonthlyCost' | 'paymentMethod',
     value: string | boolean
   ): void => {
     if (!editingDraft) return
@@ -492,6 +525,14 @@ export const Report = (): JSX.Element => {
       setEditingDraft({
         ...editingDraft,
         isMonthlyCost: editingDraft.type === 'saida' ? Boolean(value) : false
+      })
+      return
+    }
+
+    if (field === 'isConfirmed') {
+      setEditingDraft({
+        ...editingDraft,
+        isConfirmed: Boolean(value)
       })
       return
     }
@@ -528,6 +569,7 @@ export const Report = (): JSX.Element => {
         ...editingDraft,
         category,
         description: editingDraft.description.trim(),
+        isConfirmed: Boolean(editingDraft.isConfirmed),
         isMonthlyCost: editingDraft.type === 'saida' ? editingDraft.isMonthlyCost : false,
         paymentMethod: editingDraft.paymentMethod,
         installmentCount: editingDraft.paymentMethod === 'credito' ? editingDraft.installmentCount : 1,
@@ -598,14 +640,16 @@ export const Report = (): JSX.Element => {
       const year = date.getFullYear()
       const month = String(date.getMonth() + 1).padStart(2, '0')
       const day = String(date.getDate()).padStart(2, '0')
+      const transactionDate = `${year}-${month}-${day}`
 
       return {
         id: crypto.randomUUID(),
         type: createForm.type,
         amount,
-        date: `${year}-${month}-${day}`,
+        date: transactionDate,
         category,
         description,
+        isConfirmed: getDefaultConfirmedByDate(transactionDate),
         isMonthlyCost: createForm.type === 'saida' ? createForm.isMonthlyCost && !isInstallment : false,
         paymentMethod: createForm.paymentMethod,
         installmentGroupId,

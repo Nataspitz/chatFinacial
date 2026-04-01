@@ -8,7 +8,6 @@ import {
   FiClipboard,
   FiFileText,
   FiLogOut,
-  FiMessageSquare,
   FiMoon,
   FiSettings,
   FiSun
@@ -16,7 +15,6 @@ import {
 import { useAuth } from '../../contexts/AuthContext'
 import { MobileMenuButton } from './components/MobileMenuButton'
 import { AccountSettingsModal } from './components/AccountSettingsModal'
-import { PromptConfigModal } from './components/PromptConfigModal'
 import styles from './Navbar.module.css'
 
 const getLinkClassName = ({ isActive }: { isActive: boolean }): string =>
@@ -48,7 +46,6 @@ export const Navbar = (): JSX.Element => {
   const { user, signOut } = useAuth()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const [isPromptConfigOpen, setIsPromptConfigOpen] = useState(false)
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState<boolean>(() => {
     const saved = window.localStorage.getItem('sidebar.desktop.collapsed')
     return saved === 'true'
@@ -200,18 +197,6 @@ export const Navbar = (): JSX.Element => {
             <FiSettings className={styles.linkIcon} aria-hidden />
             <span>Configuracoes da conta</span>
           </button>
-          <button
-            type="button"
-            className={styles.actionButton}
-            onClick={() => {
-              closeMenu()
-              setIsPromptConfigOpen(true)
-            }}
-            title="Configurar prompt IA"
-          >
-            <FiMessageSquare className={styles.linkIcon} aria-hidden />
-            <span>Prompt IA</span>
-          </button>
           <button type="button" className={styles.actionButton} onClick={toggleTheme} title="Alterar tema">
             {theme === 'light' ? <FiMoon className={styles.linkIcon} aria-hidden /> : <FiSun className={styles.linkIcon} aria-hidden />}
             <span>{theme === 'light' ? 'Modo escuro' : 'Modo claro'}</span>
@@ -231,7 +216,6 @@ export const Navbar = (): JSX.Element => {
         </div>
       </div>
       <AccountSettingsModal open={isSettingsOpen} user={user} onClose={() => setIsSettingsOpen(false)} />
-      <PromptConfigModal open={isPromptConfigOpen} user={user} onClose={() => setIsPromptConfigOpen(false)} />
     </aside>
   )
 }
