@@ -283,6 +283,7 @@ export const Dashboard = (): JSX.Element => {
         <PageIntro
           title="Dashboard Executiva"
           description="Acompanhamento de crescimento, margem, ROI e tendencias financeiras."
+          className={styles.pageHeader}
         />
         <DashboardSkeleton />
       </PageTemplate>
@@ -294,6 +295,7 @@ export const Dashboard = (): JSX.Element => {
       <PageIntro
         title="Dashboard Executiva"
         description="Crescimento, margem, ROI, tendencia e analise mensal/ anual em uma unica visao."
+        className={styles.pageHeader}
         action={
           <div className={styles.headerActions}>
             <Button

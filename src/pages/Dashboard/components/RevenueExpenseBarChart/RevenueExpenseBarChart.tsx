@@ -23,11 +23,13 @@ export const RevenueExpenseBarChart = ({ revenue, expense, label }: RevenueExpen
             nameKey="name"
             cx="50%"
             cy="50%"
-            innerRadius={64}
-            outerRadius={96}
+            innerRadius={66}
+            outerRadius={100}
             paddingAngle={3}
             label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
             labelLine={false}
+            stroke="var(--bg-secondary)"
+            strokeWidth={1}
           >
             {data.map((entry) => (
               <Cell key={entry.name} fill={entry.color} />
@@ -40,7 +42,8 @@ export const RevenueExpenseBarChart = ({ revenue, expense, label }: RevenueExpen
               borderRadius: 10,
               border: '1px solid var(--border-color)',
               background: 'var(--card-bg)',
-              color: 'var(--text-primary)'
+              color: 'var(--text-primary)',
+              boxShadow: 'var(--shadow-sm)'
             }}
           />
         </PieChart>

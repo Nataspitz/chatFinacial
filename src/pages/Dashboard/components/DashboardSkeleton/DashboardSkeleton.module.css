@@ -1,25 +1,25 @@
-﻿.page {
+.page {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 
 .row {
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-3);
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
 .block,
 .chart,
 .chartSmall {
-  border-radius: var(--radius-md);
+  border-radius: 14px;
   background: linear-gradient(90deg, var(--bg-tertiary) 25%, var(--bg-secondary) 50%, var(--bg-tertiary) 75%);
   background-size: 220% 100%;
   animation: shimmer 1.4s infinite;
 }
 
 .block {
-  min-height: 92px;
+  min-height: 96px;
 }
 
 .chart {
@@ -37,5 +37,15 @@
 
   to {
     background-position: -220% 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    gap: var(--space-3);
+  }
+
+  .row {
+    gap: var(--space-2);
   }
 }

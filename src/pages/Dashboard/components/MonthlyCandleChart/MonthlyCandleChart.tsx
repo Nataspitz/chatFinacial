@@ -33,31 +33,43 @@ export const MonthlyCandleChart = ({ data, mode, hasData }: MonthlyCandleChartPr
         type: 'candlestick',
         background: 'transparent',
         toolbar: { show: false },
-        animations: { enabled: true }
+        animations: {
+          enabled: true,
+          easing: 'easeinout',
+          speed: 220
+        }
       },
       theme: {
         mode: themeMode
       },
       xaxis: {
         type: 'datetime',
+        tickAmount: mode === 'annual' ? 12 : 8,
         labels: {
           datetimeUTC: false,
           format: mode === 'annual' ? 'MMM' : 'dd/MM',
           style: {
-            colors: themeMode === 'dark' ? '#cbd5e1' : '#4b5563'
-          }
+            colors: themeMode === 'dark' ? '#cbd5e1' : '#4b5563',
+            fontSize: '11px'
+          },
+          offsetY: 2
         }
       },
       yaxis: {
         labels: {
           formatter: (value) => `R$ ${value.toFixed(0)}`,
           style: {
-            colors: themeMode === 'dark' ? '#cbd5e1' : '#4b5563'
-          }
+            colors: themeMode === 'dark' ? '#cbd5e1' : '#4b5563',
+            fontSize: '11px'
+          },
+          offsetX: -2
         }
       },
       plotOptions: {
         candlestick: {
+          wick: {
+            useFillColor: true
+          },
           colors: {
             upward: '#16c784',
             downward: '#ef4444'
@@ -70,6 +82,9 @@ export const MonthlyCandleChart = ({ data, mode, hasData }: MonthlyCandleChartPr
       },
       tooltip: {
         theme: themeMode,
+        style: {
+          fontSize: '12px'
+        },
         y: {
           formatter: (value) => `R$ ${Number(value).toFixed(2)}`
         }

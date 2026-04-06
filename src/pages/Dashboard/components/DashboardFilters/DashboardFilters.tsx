@@ -1,5 +1,8 @@
-﻿import styles from './DashboardFilters.module.css'
+import { useEffect, useState } from 'react'
+import { FiFilter } from 'react-icons/fi'
+import { Button, ModalBase } from '../../../../components/ui'
 import type { DashboardViewMode } from '../../types'
+import styles from './DashboardFilters.module.css'
 
 interface DashboardFiltersProps {
   selectedYear: number
@@ -35,50 +38,108 @@ export const DashboardFilters = ({
   onMonthChange,
   onModeChange
 }: DashboardFiltersProps): JSX.Element => {
+  const [isOpen, setIsOpen] = useState(false)
+  const [draftYear, setDraftYear] = useState(selectedYear)
+  const [draftMonth, setDraftMonth] = useState(selectedMonth)
+  const [draftMode, setDraftMode] = useState<DashboardViewMode>(mode)
+
+  useEffect(() => {
+    if (!isOpen) {
+      return
+    }
+
+    setDraftYear(selectedYear)
+    setDraftMonth(selectedMonth)
+    setDraftMode(mode)
+  }, [isOpen, mode, selectedMonth, selectedYear])
+
+  const handleApplyFilters = (): void => {
+    onYearChange(draftYear)
+    onMonthChange(draftMonth)
+    onModeChange(draftMode)
+    setIsOpen(false)
+  }
+
   return (
-    <section className={styles.filters} aria-label="Filtros da dashboard">
-      <label className={styles.field}>
-        <span>Ano</span>
-        <select value={selectedYear} onChange={(event) => onYearChange(Number(event.target.value))}>
-          {years.map((year) => (
-            <option key={year} value={year}>
-              {year}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <label className={styles.field}>
-        <span>Mes</span>
-        <select
-          value={selectedMonth}
-          disabled={mode === 'annual'}
-          onChange={(event) => onMonthChange(Number(event.target.value))}
-        >
-          {MONTH_OPTIONS.map((item) => (
-            <option key={item.value} value={item.value}>
-              {item.label}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <div className={styles.modeToggle} role="group" aria-label="Modo de visualizacao">
+    <>
+      <section className={styles.filters} aria-label="Filtros da dashboard">
         <button
           type="button"
-          className={mode === 'monthly' ? `${styles.modeButton} ${styles.active}` : styles.modeButton}
-          onClick={() => onModeChange('monthly')}
+          className={`${styles.filterIconButton} ${isOpen ? styles.filterIconButtonActive : ''}`.trim()}
+          aria-label="Abrir filtros da dashboard"
+          onClick={() => setIsOpen(true)}
         >
-          Visao mensal
+          <FiFilter />
         </button>
-        <button
-          type="button"
-          className={mode === 'annual' ? `${styles.modeButton} ${styles.active}` : styles.modeButton}
-          onClick={() => onModeChange('annual')}
+      </section>
+
+      <ModalBase
+        open={isOpen}
+        title="Filtros da dashboard"
+        onClose={() => setIsOpen(false)}
+      >
+        <form
+          className={styles.filterModalForm}
+          onSubmit={(event) => {
+            event.preventDefault()
+            handleApplyFilters()
+          }}
         >
-          Visao anual
-        </button>
-      </div>
-    </section>
+          <div className={styles.fieldsGrid}>
+            <label className={styles.field}>
+              <span>Ano</span>
+              <select value={draftYear} onChange={(event) => setDraftYear(Number(event.target.value))}>
+                {years.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className={styles.field}>
+              <span>Mes</span>
+              <select
+                value={draftMonth}
+                disabled={draftMode === 'annual'}
+                onChange={(event) => setDraftMonth(Number(event.target.value))}
+              >
+                {MONTH_OPTIONS.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className={styles.modeToggle} role="group" aria-label="Modo de visualizacao">
+            <button
+              type="button"
+              className={draftMode === 'monthly' ? `${styles.modeButton} ${styles.active}` : styles.modeButton}
+              onClick={() => setDraftMode('monthly')}
+            >
+              Visao mensal
+            </button>
+            <button
+              type="button"
+              className={draftMode === 'annual' ? `${styles.modeButton} ${styles.active}` : styles.modeButton}
+              onClick={() => setDraftMode('annual')}
+            >
+              Visao anual
+            </button>
+          </div>
+
+          <div className={styles.modalActions}>
+            <Button type="button" variant="ghost" onClick={() => setIsOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit">
+              Aplicar filtros
+            </Button>
+          </div>
+        </form>
+      </ModalBase>
+    </>
   )
 }
