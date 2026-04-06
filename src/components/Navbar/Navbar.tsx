@@ -15,32 +15,11 @@ import {
 import { useAuth } from '../../contexts/AuthContext'
 import { MobileMenuButton } from './components/MobileMenuButton'
 import { AccountSettingsModal } from './components/AccountSettingsModal'
+import { isAccountSetupComplete } from './navbar.utils'
 import styles from './Navbar.module.css'
 
 const getLinkClassName = ({ isActive }: { isActive: boolean }): string =>
   isActive ? `${styles.link} ${styles.active}` : styles.link
-
-const isAccountSetupComplete = (user: ReturnType<typeof useAuth>['user']): boolean => {
-  const meta = (user?.user_metadata ?? {}) as Record<string, unknown>
-
-  const fullName = typeof meta.full_name === 'string' ? meta.full_name.trim() : ''
-  const phone = typeof meta.phone === 'string' ? meta.phone.trim() : ''
-  const companyName = typeof meta.company_name === 'string' ? meta.company_name.trim() : ''
-  const preferredCurrency = typeof meta.preferred_currency === 'string' ? meta.preferred_currency.trim() : ''
-
-  const noInitialInvestment = Boolean(meta.no_initial_investment)
-  const investmentBase =
-    typeof meta.investment_base_amount === 'number'
-      ? meta.investment_base_amount
-      : typeof meta.investment_base_amount === 'string'
-        ? Number(meta.investment_base_amount.replace(',', '.'))
-        : Number.NaN
-
-  const hasValidInvestmentBase = Number.isFinite(investmentBase) && investmentBase >= 0
-  const investmentConfigured = noInitialInvestment || hasValidInvestmentBase
-
-  return Boolean(fullName && phone && companyName && preferredCurrency.length === 3 && investmentConfigured)
-}
 
 export const Navbar = (): JSX.Element => {
   const { user, signOut } = useAuth()

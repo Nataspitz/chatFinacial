@@ -3,37 +3,13 @@ import type { User } from '@supabase/supabase-js'
 import { Button, ButtonLoading, ModalBase } from '../../ui'
 import { supabase } from '../../../lib/supabase'
 import { businessService } from '../../../services/business.service'
+import { toInitialForm, type AccountSettingsForm } from './account-settings.utils'
 import styles from './AccountSettingsModal.module.css'
 
 interface AccountSettingsModalProps {
   open: boolean
   user: User | null
   onClose: () => void
-}
-
-interface AccountSettingsForm {
-  fullName: string
-  phone: string
-  companyName: string
-  preferredCurrency: string
-  investmentBaseAmount: string
-  noInitialInvestment: boolean
-}
-
-const toInitialForm = (user: User | null): AccountSettingsForm => {
-  const meta = (user?.user_metadata ?? {}) as Record<string, unknown>
-
-  return {
-    fullName: typeof meta.full_name === 'string' ? meta.full_name : '',
-    phone: typeof meta.phone === 'string' ? meta.phone : '',
-    companyName: typeof meta.company_name === 'string' ? meta.company_name : '',
-    preferredCurrency: typeof meta.preferred_currency === 'string' ? meta.preferred_currency : 'BRL',
-    investmentBaseAmount:
-      typeof meta.investment_base_amount === 'number' && Number.isFinite(meta.investment_base_amount)
-        ? String(meta.investment_base_amount)
-        : '',
-    noInitialInvestment: Boolean(meta.no_initial_investment)
-  }
 }
 
 export const AccountSettingsModal = ({ open, user, onClose }: AccountSettingsModalProps): JSX.Element => {
