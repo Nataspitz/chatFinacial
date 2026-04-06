@@ -7,14 +7,21 @@ interface PageIntroProps {
   description: string
   titleTag?: 'h1' | 'h2'
   action?: ReactNode
+  className?: string
 }
 
-export const PageIntro = ({ title, description, titleTag = 'h1', action }: PageIntroProps): JSX.Element => {
+export const PageIntro = ({
+  title,
+  description,
+  titleTag = 'h1',
+  action,
+  className
+}: PageIntroProps): JSX.Element => {
   const TitleTag = titleTag
 
   if (action) {
     return (
-      <header className={cx(styles.header, styles.headerWithAction)}>
+      <header className={cx(styles.header, styles.headerWithAction, className)}>
         <div>
           <TitleTag>{title}</TitleTag>
           <p className={styles.description}>{description}</p>
@@ -25,7 +32,7 @@ export const PageIntro = ({ title, description, titleTag = 'h1', action }: PageI
   }
 
   return (
-    <header className={styles.header}>
+    <header className={cx(styles.header, className)}>
       <TitleTag>{title}</TitleTag>
       <p className={styles.description}>{description}</p>
     </header>

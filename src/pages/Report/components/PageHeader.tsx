@@ -24,6 +24,7 @@ export const PageHeader = ({
     <PageIntro
       title="Relatorio"
       description="Visualizacao de transacoes por conta."
+      className={styles.pageHeader}
       action={
         <div className={styles.headerActions}>
           <div className={styles.desktopHeaderActions}>

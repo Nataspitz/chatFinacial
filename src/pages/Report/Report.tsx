@@ -1011,12 +1011,16 @@ export const Report = (): JSX.Element => {
 
       {!isLoading && !error && (
         <>
-          <div className={styles.resultHeader}>
-            <span>Resultado</span>
-            <strong className={resultBalance >= 0 ? styles.resultPositive : styles.resultNegative}>
-              {formatCurrency(resultBalance)}
-            </strong>
-          </div>
+            <div
+              className={`${styles.resultHeader} ${
+                resultBalance >= 0 ? styles.resultHeaderPositive : styles.resultHeaderNegative
+              }`.trim()}
+            >
+              <span>Resultado</span>
+              <strong className={resultBalance >= 0 ? styles.resultPositive : styles.resultNegative}>
+                {formatCurrency(resultBalance)}
+              </strong>
+            </div>
 
           <div className={styles.grid}>
             <TransactionsTable
