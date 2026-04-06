@@ -7,6 +7,8 @@ import styles from '../Report.module.css'
 
 interface TransactionsTableProps {
   title: string
+  totalLabel: string
+  totalTone?: 'entrada' | 'saida' | 'neutral'
   transactions: Transaction[]
   emptyMessage?: string
   categoryOptions: string[]
@@ -29,6 +31,8 @@ interface TransactionsTableProps {
 
 export const TransactionsTable = ({
   title,
+  totalLabel,
+  totalTone = 'neutral',
   transactions,
   categoryOptions,
   onDelete,
@@ -46,7 +50,7 @@ export const TransactionsTable = ({
   variant = 'default'
 }: TransactionsTableProps): JSX.Element => {
   const [isExpanded, setIsExpanded] = useState(true)
-  const [mobileActionsId, setMobileActionsId] = useState<string | null>(null)
+  const [mobileExpandedId, setMobileExpandedId] = useState<string | null>(null)
 
   const getCategorySelectOptions = (currentCategory: string): string[] => {
     const normalizedCurrent = currentCategory.trim()
@@ -100,7 +104,7 @@ export const TransactionsTable = ({
     return 'Pix'
   }
 
-  const renderActions = (transaction: Transaction, isEditing: boolean): JSX.Element => {
+  const renderActions = (transaction: Transaction, isEditing: boolean, isMobile = false): JSX.Element => {
     if (isEditing) {
       return (
         <div className={styles.actionsGroup}>
@@ -124,6 +128,33 @@ export const TransactionsTable = ({
           >
             Cancelar
           </Button>
+        </div>
+      )
+    }
+
+    if (isMobile) {
+      return (
+        <div className={styles.actionsGroup}>
+          <Button
+            type="button"
+            variant="secondary"
+            className={styles.actionButton}
+            disabled={deletingId === transaction.id}
+            onClick={() => onEditStart(transaction)}
+          >
+            Editar
+          </Button>
+          <ButtonLoading
+            type="button"
+            variant="danger"
+            className={styles.actionButton}
+            loading={deletingId === transaction.id}
+            onClick={() => {
+              void onDelete(transaction.id)
+            }}
+          >
+            Apagar
+          </ButtonLoading>
         </div>
       )
     }
@@ -166,8 +197,21 @@ export const TransactionsTable = ({
         aria-expanded={isExpanded}
         onClick={() => setIsExpanded((prev) => !prev)}
       >
-        <h2 className={styles.sectionTitle}>{title}</h2>
-        {isExpanded ? <FiChevronUp /> : <FiChevronDown />}
+        <div className={styles.sectionHeading}>
+          <h2 className={styles.sectionTitle}>{title}</h2>
+          <strong
+            className={`${styles.sectionTotal} ${
+              totalTone === 'entrada'
+                ? styles.sectionTotalEntrada
+                : totalTone === 'saida'
+                  ? styles.sectionTotalSaida
+                  : ''
+            }`.trim()}
+          >
+            {totalLabel}
+          </strong>
+        </div>
+        <span className={styles.sectionToggleIcon}>{isExpanded ? <FiChevronUp /> : <FiChevronDown />}</span>
       </button>
 
       {!isExpanded ? null : transactions.length === 0 ? (
@@ -291,124 +335,155 @@ export const TransactionsTable = ({
           <div className={styles.mobileList}>
             {transactions.map((transaction) => {
               const isEditing = editingId === transaction.id && editingDraft !== null
+              const isMobileExpanded = mobileExpandedId === transaction.id
 
               return (
                 <article key={transaction.id} className={styles.mobileItem}>
-                  <div className={styles.mobileRow}>
-                    <span className={styles.mobileLabel}>Data</span>
-                    <div className={styles.mobileValue}>
-                      {isEditing ? (
-                        <input
-                          type="date"
-                          className={styles.cellInput}
-                          value={editingDraft.date}
-                          onChange={(event) => onEditChange('date', event.target.value)}
-                        />
-                      ) : (
-                        formatDate(transaction.date)
-                      )}
-                    </div>
-                  </div>
-                  <div className={styles.mobileRow}>
-                    <span className={styles.mobileLabel}>Categoria</span>
-                    <div className={styles.mobileValue}>
-                      {isEditing ? (
-                        <select
-                          className={styles.cellInput}
-                          value={editingDraft.category}
-                          onChange={(event) => onEditChange('category', event.target.value)}
-                        >
-                          {getCategorySelectOptions(editingDraft.category).map((option) => (
-                            <option key={option} value={option}>
-                              {option}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        transaction.category
-                      )}
-                    </div>
-                  </div>
-                  <div className={styles.mobileRow}>
-                    <span className={styles.mobileLabel}>Descricao</span>
-                    <div className={styles.mobileValue}>
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          className={styles.cellInput}
-                          value={editingDraft.description}
-                          onChange={(event) => onEditChange('description', event.target.value)}
-                        />
-                      ) : (
-                        transaction.description
-                      )}
-                    </div>
-                  </div>
-                  <div className={styles.mobileRow}>
-                    <span className={styles.mobileLabel}>Valor</span>
-                    <div className={styles.mobileValue}>
-                      {isEditing ? (
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          className={styles.cellInput}
-                          value={String(editingDraft.amount)}
-                          onChange={(event) => onEditChange('amount', event.target.value)}
-                        />
-                      ) : (
-                        formatCurrency(transaction.amount)
-                      )}
-                    </div>
-                  </div>
-                  <div className={styles.mobileRow}>
-                    <span className={styles.mobileLabel}>Pagamento</span>
-                    <div className={styles.mobileValue}>
-                      {isEditing ? (
-                        <select
-                          className={styles.cellInput}
-                          value={editingDraft.paymentMethod}
-                          onChange={(event) => onEditChange('paymentMethod', event.target.value)}
-                        >
-                          <option value="pix">Pix</option>
-                          <option value="debito">Debito</option>
-                          <option value="dinheiro">Dinheiro</option>
-                          <option value="credito">Credito</option>
-                        </select>
-                      ) : (
-                        formatPaymentMethod(transaction.paymentMethod)
-                      )}
-                    </div>
-                  </div>
-                  <div className={styles.mobileRow}>
-                    <span className={styles.mobileLabel}>Parcela</span>
-                    <div className={styles.mobileValue}>
-                      {transaction.installmentCount > 1 ? `${transaction.installmentNumber}/${transaction.installmentCount}` : '-'}
-                    </div>
-                  </div>
-                  <div className={styles.mobileRow}>
-                    <span className={styles.mobileLabel}>Confirmado</span>
-                    <div className={styles.mobileValue}>{getConfirmedValue(transaction, isEditing)}</div>
-                  </div>
-                  <div className={styles.mobileRow}>
-                    <span className={styles.mobileLabel}>Custo mensal</span>
-                    <div className={styles.mobileValue}>{getMonthlyCostValue(transaction, isEditing)}</div>
-                  </div>
-
                   {isEditing ? (
-                    <div className={styles.mobileActions}>{renderActions(transaction, isEditing)}</div>
+                    <>
+                      <div className={styles.mobileRow}>
+                        <span className={styles.mobileLabel}>Data</span>
+                        <div className={styles.mobileValue}>
+                          <input
+                            type="date"
+                            className={styles.cellInput}
+                            value={editingDraft.date}
+                            onChange={(event) => onEditChange('date', event.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div className={styles.mobileRow}>
+                        <span className={styles.mobileLabel}>Nome</span>
+                        <div className={styles.mobileValue}>
+                          <select
+                            className={styles.cellInput}
+                            value={editingDraft.category}
+                            onChange={(event) => onEditChange('category', event.target.value)}
+                          >
+                            {getCategorySelectOptions(editingDraft.category).map((option) => (
+                              <option key={option} value={option}>
+                                {option}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                      <div className={styles.mobileRow}>
+                        <span className={styles.mobileLabel}>Descricao</span>
+                        <div className={styles.mobileValue}>
+                          <input
+                            type="text"
+                            className={styles.cellInput}
+                            value={editingDraft.description}
+                            onChange={(event) => onEditChange('description', event.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div className={styles.mobileRow}>
+                        <span className={styles.mobileLabel}>Valor</span>
+                        <div className={styles.mobileValue}>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            className={styles.cellInput}
+                            value={String(editingDraft.amount)}
+                            onChange={(event) => onEditChange('amount', event.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <div className={styles.mobileRow}>
+                        <span className={styles.mobileLabel}>Pagamento</span>
+                        <div className={styles.mobileValue}>
+                          <select
+                            className={styles.cellInput}
+                            value={editingDraft.paymentMethod}
+                            onChange={(event) => onEditChange('paymentMethod', event.target.value)}
+                          >
+                            <option value="pix">Pix</option>
+                            <option value="debito">Debito</option>
+                            <option value="dinheiro">Dinheiro</option>
+                            <option value="credito">Credito</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className={styles.mobileRow}>
+                        <span className={styles.mobileLabel}>Parcela</span>
+                        <div className={styles.mobileValue}>
+                          {transaction.installmentCount > 1 ? `${transaction.installmentNumber}/${transaction.installmentCount}` : '-'}
+                        </div>
+                      </div>
+                      <div className={styles.mobileRow}>
+                        <span className={styles.mobileLabel}>Confirmado</span>
+                        <div className={styles.mobileValue}>{getConfirmedValue(transaction, isEditing)}</div>
+                      </div>
+                      <div className={styles.mobileRow}>
+                        <span className={styles.mobileLabel}>Custo mensal</span>
+                        <div className={styles.mobileValue}>{getMonthlyCostValue(transaction, isEditing)}</div>
+                      </div>
+                      <div className={styles.mobileActions}>{renderActions(transaction, isEditing, true)}</div>
+                    </>
                   ) : (
-                    <div className={styles.mobileActions}>
+                    <>
+                      <div className={styles.mobileSummaryRow}>
+                        <div className={styles.mobileSummaryItem}>
+                          <span className={styles.mobileLabel}>Data</span>
+                          <div className={styles.mobileValue}>{formatDate(transaction.date)}</div>
+                        </div>
+                        <div className={styles.mobileSummaryItem}>
+                          <span className={styles.mobileLabel}>Nome</span>
+                          <div className={styles.mobileValue}>{transaction.category}</div>
+                        </div>
+                        <div className={styles.mobileSummaryItem}>
+                          <span className={styles.mobileLabel}>Valor</span>
+                          <div className={styles.mobileValue}>{formatCurrency(transaction.amount)}</div>
+                        </div>
+                      </div>
+
                       <button
                         type="button"
-                        className={styles.mobileEditToggle}
-                        aria-label="Mostrar acoes"
-                        onClick={() => setMobileActionsId((prev) => (prev === transaction.id ? null : transaction.id))}
+                        className={styles.mobileReadMoreButton}
+                        onClick={() => setMobileExpandedId((prev) => (prev === transaction.id ? null : transaction.id))}
                       >
-                        <FiEdit2 />
+                        <span>{isMobileExpanded ? 'Ler menos' : 'Ler mais'}</span>
+                        {isMobileExpanded ? <FiChevronUp /> : <FiChevronDown />}
                       </button>
-                      {mobileActionsId === transaction.id ? renderActions(transaction, false) : null}
-                    </div>
+
+                      <div
+                        className={`${styles.mobileExpandedDetails} ${isMobileExpanded ? styles.mobileExpandedDetailsOpen : ''}`.trim()}
+                        aria-hidden={!isMobileExpanded}
+                      >
+                        <div className={styles.mobileExpandedDetailsInner}>
+                          <div className={styles.mobileRow}>
+                            <span className={styles.mobileLabel}>Descricao</span>
+                            <div className={styles.mobileValue}>{transaction.description}</div>
+                          </div>
+                          <div className={styles.mobileRow}>
+                            <span className={styles.mobileLabel}>Pagamento</span>
+                            <div className={styles.mobileValue}>{formatPaymentMethod(transaction.paymentMethod)}</div>
+                          </div>
+                          <div className={styles.mobileRow}>
+                            <span className={styles.mobileLabel}>Parcela</span>
+                            <div className={styles.mobileValue}>
+                              {transaction.installmentCount > 1
+                                ? `${transaction.installmentNumber}/${transaction.installmentCount}`
+                                : '-'}
+                            </div>
+                          </div>
+                          <div className={styles.mobileRow}>
+                            <span className={styles.mobileLabel}>Confirmado</span>
+                            <div className={styles.mobileValue}>{transaction.isConfirmed ? 'Sim' : 'Nao'}</div>
+                          </div>
+                          <div className={styles.mobileRow}>
+                            <span className={styles.mobileLabel}>Custo mensal</span>
+                            <div className={styles.mobileValue}>
+                              {transaction.type === 'saida' ? (transaction.isMonthlyCost ? 'Sim' : 'Nao') : '-'}
+                            </div>
+                          </div>
+                          <div className={styles.mobileActions}>{renderActions(transaction, false, true)}</div>
+                        </div>
+                      </div>
+                    </>
                   )}
                 </article>
               )

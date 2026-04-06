@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { FiFilter, FiSearch, FiX } from 'react-icons/fi'
 import { Button, ButtonLoading, ModalBase } from '../../components/ui'
 import { LoadingState } from '../../components/organisms/LoadingState/LoadingState'
 import { PageTemplate } from '../../components/templates/PageTemplate/PageTemplate'
@@ -7,9 +8,6 @@ import { financeService, type CategoryItem } from '../../services/finance.servic
 import type { ExportReportPdfPayload } from '../../types/report-export.types'
 import type { PaymentMethod, Transaction, TransactionType } from '../../types/transaction.types'
 import { PageHeader } from './components/PageHeader'
-import { ReportFilters } from './components/ReportFilters'
-import { ReportSummary } from './components/ReportSummary'
-import { ResultFooter } from './components/ResultFooter'
 import { TransactionsTable } from './components/TransactionsTable'
 import styles from './Report.module.css'
 
@@ -30,6 +28,17 @@ interface ExportFormState {
   year: string
   month: string
   day: string
+}
+
+interface ListFilterState {
+  operationType: 'all' | TransactionType
+  maxAmountLimit: string
+}
+
+interface CombinedFilterDraftState extends ListFilterState {
+  selectedYear: string
+  selectedMonth: string
+  selectedDay: string
 }
 
 const formatCurrency = (value: number): string => {
@@ -99,6 +108,19 @@ const initialExportFormState: ExportFormState = {
   month: String(new Date().getMonth() + 1).padStart(2, '0'),
   day: String(new Date().getDate()).padStart(2, '0')
 }
+
+const initialListFilterState: ListFilterState = {
+  operationType: 'all',
+  maxAmountLimit: ''
+}
+
+const initialCombinedFilterDraftState = (): CombinedFilterDraftState => ({
+  selectedYear: getCurrentYear(),
+  selectedMonth: getCurrentMonth(),
+  selectedDay: 'all',
+  operationType: 'all',
+  maxAmountLimit: ''
+})
 
 const normalizeCategoryValue = (value: string): string => value.trim().replace(/\s+/g, ' ')
 
@@ -249,6 +271,11 @@ export const Report = (): JSX.Element => {
   const [isSavingCategory, setIsSavingCategory] = useState(false)
   const [categoryUpdatingId, setCategoryUpdatingId] = useState<string | null>(null)
   const [categoryDeletingId, setCategoryDeletingId] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [isListFilterModalOpen, setIsListFilterModalOpen] = useState(false)
+  const [isMobileActionsDrawerOpen, setIsMobileActionsDrawerOpen] = useState(false)
+  const [appliedListFilter, setAppliedListFilter] = useState<ListFilterState>(initialListFilterState)
+  const [draftCombinedFilter, setDraftCombinedFilter] = useState<CombinedFilterDraftState>(initialCombinedFilterDraftState)
 
   const loadTransactions = async (): Promise<void> => {
     try {
@@ -333,14 +360,52 @@ export const Report = (): JSX.Element => {
     })
   }, [selectedDay, selectedMonth, selectedYear, transactions])
 
-  const dayOptions = useMemo(() => {
-    const days = filteredTransactions
+  const combinedFilterDayOptions = useMemo(() => {
+    const days = transactions
       .map((item) => normalizeTransactionDate(item.date))
       .filter((value): value is string => Boolean(value))
+      .filter((value) => {
+        const year = value.slice(0, 4)
+        const month = value.slice(5, 7)
+        const matchYear = draftCombinedFilter.selectedYear === 'all' || year === draftCombinedFilter.selectedYear
+        const matchMonth = draftCombinedFilter.selectedMonth === 'all' || month === draftCombinedFilter.selectedMonth
+        return matchYear && matchMonth
+      })
       .map((value) => value.slice(8, 10))
 
     return ['all', ...Array.from(new Set(days)).sort((a, b) => Number(a) - Number(b))]
-  }, [filteredTransactions])
+  }, [draftCombinedFilter.selectedMonth, draftCombinedFilter.selectedYear, transactions])
+
+  const displayedTransactions = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase()
+    const hasSearch = normalizedSearch.length > 0
+    const maxAmountLimit = Number(appliedListFilter.maxAmountLimit)
+    const hasMaxAmountLimit = appliedListFilter.maxAmountLimit.trim() !== '' && Number.isFinite(maxAmountLimit)
+
+    return filteredTransactions.filter((item) => {
+      if (appliedListFilter.operationType !== 'all' && item.type !== appliedListFilter.operationType) {
+        return false
+      }
+
+      if (hasMaxAmountLimit && item.amount > maxAmountLimit) {
+        return false
+      }
+
+      if (!hasSearch) {
+        return true
+      }
+
+      const searchableAmount = `${item.amount}`.replace('.', ',')
+      const searchableText = `${item.category} ${item.description} ${item.amount} ${searchableAmount} ${formatCurrency(item.amount)}`.toLowerCase()
+      return searchableText.includes(normalizedSearch)
+    })
+  }, [appliedListFilter, filteredTransactions, searchTerm])
+
+  const amountRangeMax = useMemo(() => {
+    const maxAmount = transactions.reduce((highest, item) => Math.max(highest, item.amount), 0)
+    const rounded = Math.ceil(maxAmount / 100) * 100
+    return Math.max(100, rounded)
+  }, [transactions])
 
   const exportYearOptions = useMemo(() => {
     const years = transactions
@@ -408,29 +473,13 @@ export const Report = (): JSX.Element => {
 
   const todayDate = getTodayDate()
 
-  const getLatestTransactionDate = (items: Transaction[], type: Transaction['type']): string | null => {
-    const latestDate = items
-      .filter((item) => item.type === type)
-      .map((item) => normalizeTransactionDate(item.date))
-      .filter((value): value is string => Boolean(value))
-      .reduce<string | null>((latest, current) => {
-        if (latest === null) {
-          return current
-        }
-
-        return current > latest ? current : latest
-      }, null)
-
-    return latestDate
-  }
-
   const mainTransactions = useMemo(
-    () => filteredTransactions.filter((item) => item.isConfirmed || !isTransactionInFuture(item, todayDate)),
-    [filteredTransactions, todayDate]
+    () => displayedTransactions.filter((item) => item.isConfirmed || !isTransactionInFuture(item, todayDate)),
+    [displayedTransactions, todayDate]
   )
   const futureTransactions = useMemo(
-    () => filteredTransactions.filter((item) => !item.isConfirmed && isTransactionInFuture(item, todayDate)),
-    [filteredTransactions, todayDate]
+    () => displayedTransactions.filter((item) => !item.isConfirmed && isTransactionInFuture(item, todayDate)),
+    [displayedTransactions, todayDate]
   )
 
   const exportEntries = useMemo(
@@ -460,13 +509,18 @@ export const Report = (): JSX.Element => {
   const futureOutcomes = useMemo(() => futureTransactions.filter((item) => item.type === 'saida'), [futureTransactions])
   const totalEntries = useMemo(() => entries.reduce((acc, item) => acc + item.amount, 0), [entries])
   const totalOutcomes = useMemo(() => outcomes.reduce((acc, item) => acc + item.amount, 0), [outcomes])
-  const totalInstallments = useMemo(
-    () => outcomes.filter((item) => item.installmentCount > 1).reduce((acc, item) => acc + item.amount, 0),
-    [outcomes]
-  )
+  const totalFutureEntries = useMemo(() => futureEntries.reduce((acc, item) => acc + item.amount, 0), [futureEntries])
+  const totalFutureOutcomes = useMemo(() => futureOutcomes.reduce((acc, item) => acc + item.amount, 0), [futureOutcomes])
   const resultBalance = useMemo(() => totalEntries - totalOutcomes, [totalEntries, totalOutcomes])
-  const lastEntryDate = useMemo(() => getLatestTransactionDate(mainTransactions, 'entrada'), [mainTransactions])
-  const lastOutcomeDate = useMemo(() => getLatestTransactionDate(mainTransactions, 'saida'), [mainTransactions])
+  const hasActiveCombinedFilter = useMemo(
+    () =>
+      selectedYear !== getCurrentYear()
+      || selectedMonth !== getCurrentMonth()
+      || selectedDay !== 'all'
+      || appliedListFilter.operationType !== 'all'
+      || appliedListFilter.maxAmountLimit.trim() !== '',
+    [appliedListFilter, selectedDay, selectedMonth, selectedYear]
+  )
 
   const handleDelete = async (id: string): Promise<void> => {
     const transaction = transactions.find((item) => item.id === id) ?? null
@@ -502,6 +556,25 @@ export const Report = (): JSX.Element => {
       isMonthlyCost: transaction.type === 'saida' ? Boolean(transaction.isMonthlyCost) : false
     })
     setError('')
+  }
+
+  const handleApplyListFilter = (): void => {
+    setSelectedYear(draftCombinedFilter.selectedYear)
+    setSelectedMonth(draftCombinedFilter.selectedMonth)
+    setSelectedDay(draftCombinedFilter.selectedDay)
+    setAppliedListFilter({
+      operationType: draftCombinedFilter.operationType,
+      maxAmountLimit: draftCombinedFilter.maxAmountLimit.trim()
+    })
+    setIsListFilterModalOpen(false)
+  }
+
+  const handleClearListFilter = (): void => {
+    setSelectedYear(getCurrentYear())
+    setSelectedMonth(getCurrentMonth())
+    setSelectedDay('all')
+    setAppliedListFilter(initialListFilterState)
+    setDraftCombinedFilter(initialCombinedFilterDraftState())
   }
 
   const handleEditCancel = (): void => {
@@ -815,84 +888,141 @@ export const Report = (): JSX.Element => {
     }
   }
 
+  const handleOpenCreateTransaction = (): void => {
+    setCreateFeedback('')
+    setNewCategoryName('')
+    setCreateForm((prev) => ({
+      ...prev,
+      category: categoryOptions[prev.type][0]?.name ?? ''
+    }))
+    setIsCreateModalOpen(true)
+    setIsMobileActionsDrawerOpen(false)
+  }
+
+  const handleOpenCategories = (): void => {
+    setCategoryType('saida')
+    setCategoryFeedback('')
+    setNewCategoryName('')
+    setIsCreateCategoryOpen(false)
+    setEditingCategoryId(null)
+    setEditingCategoryName('')
+    setIsCategoryModalOpen(true)
+    setIsMobileActionsDrawerOpen(false)
+  }
+
+  const handleOpenExportModal = (): void => {
+    setExportFeedback('')
+    setExportForm((prev) => ({
+      ...prev,
+      year: exportYearOptions[0] ?? prev.year,
+      day: exportDayOptions[0] ?? prev.day
+    }))
+    setIsExportModalOpen(true)
+    setIsMobileActionsDrawerOpen(false)
+  }
+
   return (
     <PageTemplate className={styles.page}>
       <PageHeader
-        onCreate={() => {
-          setCreateFeedback('')
-          setNewCategoryName('')
-          setCreateForm((prev) => ({
-            ...prev,
-            category: categoryOptions[prev.type][0]?.name ?? ''
-          }))
-          setIsCreateModalOpen(true)
-        }}
-        onManageCategories={() => {
-          setCategoryType('saida')
-          setCategoryFeedback('')
-          setNewCategoryName('')
-          setIsCreateCategoryOpen(false)
-          setEditingCategoryId(null)
-          setEditingCategoryName('')
-          setIsCategoryModalOpen(true)
-        }}
-        onExport={() => {
-          setExportFeedback('')
-          setExportForm((prev) => ({
-            ...prev,
-            year: exportYearOptions[0] ?? prev.year,
-            day: exportDayOptions[0] ?? prev.day
-          }))
-          setIsExportModalOpen(true)
-        }}
+        onCreate={handleOpenCreateTransaction}
+        onManageCategories={handleOpenCategories}
+        onExport={handleOpenExportModal}
+        onOpenMobileActions={() => setIsMobileActionsDrawerOpen(true)}
         isExporting={isExporting}
         disabled={isLoading}
       />
 
-      <ReportFilters
-        selectedYear={selectedYear}
-        selectedMonth={selectedMonth}
-        selectedDay={selectedDay}
-        yearOptions={yearOptions}
-        dayOptions={dayOptions}
-        onYearChange={setSelectedYear}
-        onMonthChange={setSelectedMonth}
-        onDayChange={setSelectedDay}
-      />
+      {isMobileActionsDrawerOpen ? (
+        <div className={styles.mobileActionsDrawerOverlay} onClick={() => setIsMobileActionsDrawerOpen(false)}>
+          <aside
+            className={styles.mobileActionsDrawer}
+            role="dialog"
+            aria-label="Acoes do relatorio"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className={styles.mobileActionsDrawerHeader}>
+              <strong>Acoes</strong>
+              <button
+                type="button"
+                className={styles.mobileActionsDrawerClose}
+                aria-label="Fechar menu de acoes"
+                onClick={() => setIsMobileActionsDrawerOpen(false)}
+              >
+                <FiX />
+              </button>
+            </div>
+            <div className={styles.mobileActionsDrawerButtons}>
+              <Button type="button" variant="secondary" onClick={handleOpenCreateTransaction}>
+                Nova transacao
+              </Button>
+              <Button type="button" variant="ghost" onClick={handleOpenCategories}>
+                Categorias
+              </Button>
+              <ButtonLoading
+                type="button"
+                variant="primary"
+                loading={isExporting}
+                disabled={isLoading}
+                onClick={handleOpenExportModal}
+              >
+                Exportar relatorio
+              </ButtonLoading>
+            </div>
+          </aside>
+        </div>
+      ) : null}
+
+      <div className={styles.searchFilterBar}>
+        <label className={styles.searchInputWrap}>
+          <FiSearch />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Pesquisar por nome, valor ou descricao"
+          />
+        </label>
+        <button
+          type="button"
+          className={`${styles.filterIconButton} ${hasActiveCombinedFilter ? styles.filterIconButtonActive : ''}`.trim()}
+          aria-label="Abrir filtros"
+          onClick={() => {
+            setDraftCombinedFilter({
+              selectedYear,
+              selectedMonth,
+              selectedDay,
+              operationType: appliedListFilter.operationType,
+              maxAmountLimit: appliedListFilter.maxAmountLimit
+            })
+            setIsListFilterModalOpen(true)
+          }}
+        >
+          <FiFilter />
+        </button>
+        {hasActiveCombinedFilter ? (
+          <Button type="button" variant="ghost" className={styles.clearFilterButton} onClick={handleClearListFilter}>
+            Limpar filtros
+          </Button>
+        ) : null}
+      </div>
 
       {isLoading && <LoadingState label="Carregando transacoes..." />}
       {error && <p className={styles.error}>{error}</p>}
 
       {!isLoading && !error && (
         <>
-          <ReportSummary
-            totalEntries={totalEntries}
-            totalOutcomes={totalOutcomes}
-            totalInstallments={totalInstallments}
-            formatCurrency={formatCurrency}
-          />
-
-          <div className={styles.listHeader}>
-            <div className={styles.listHeaderCopy}>
-              <h2 className={styles.listHeaderTitle}>Lançamentos</h2>
-              <p className={styles.listHeaderDescription}>
-                As listas principais mostram movimentações até hoje. As futuras ficam separadas abaixo.
-              </p>
-            </div>
-
-            <div className={styles.listHeaderMeta}>
-              <span className={styles.listHeaderMetaItem}>
-                <strong>Última entrada:</strong> {lastEntryDate ? formatDate(lastEntryDate) : 'Sem lançamentos'}
-              </span>
-              <span className={styles.listHeaderMetaItem}>
-                <strong>Última saída:</strong> {lastOutcomeDate ? formatDate(lastOutcomeDate) : 'Sem lançamentos'}
-              </span>
-            </div>
+          <div className={styles.resultHeader}>
+            <span>Resultado</span>
+            <strong className={resultBalance >= 0 ? styles.resultPositive : styles.resultNegative}>
+              {formatCurrency(resultBalance)}
+            </strong>
           </div>
 
           <div className={styles.grid}>
             <TransactionsTable
               title="Entradas"
+              totalLabel={formatCurrency(totalEntries)}
+              totalTone="entrada"
               transactions={entries}
               emptyMessage="Sem entradas até hoje."
               categoryOptions={categoryOptions.entrada.map((item) => item.name)}
@@ -909,7 +1039,9 @@ export const Report = (): JSX.Element => {
               formatDate={formatDate}
             />
             <TransactionsTable
-              title="Saídas"
+              title="Saidas"
+              totalLabel={formatCurrency(totalOutcomes)}
+              totalTone="saida"
               transactions={outcomes}
               emptyMessage="Sem saídas até hoje."
               categoryOptions={categoryOptions.saida.map((item) => item.name)}
@@ -927,6 +1059,8 @@ export const Report = (): JSX.Element => {
             />
             <TransactionsTable
               title="Entradas futuras"
+              totalLabel={formatCurrency(totalFutureEntries)}
+              totalTone="entrada"
               transactions={futureEntries}
               emptyMessage="Sem entradas futuras."
               categoryOptions={categoryOptions.entrada.map((item) => item.name)}
@@ -944,7 +1078,9 @@ export const Report = (): JSX.Element => {
               variant="future"
             />
             <TransactionsTable
-              title="Saídas futuras"
+              title="Saidas futuras"
+              totalLabel={formatCurrency(totalFutureOutcomes)}
+              totalTone="saida"
               transactions={futureOutcomes}
               emptyMessage="Sem saídas futuras."
               categoryOptions={categoryOptions.saida.map((item) => item.name)}
@@ -963,9 +1099,148 @@ export const Report = (): JSX.Element => {
             />
           </div>
 
-          <ResultFooter resultBalance={resultBalance} formatCurrency={formatCurrency} />
         </>
       )}
+
+      <ModalBase
+        open={isListFilterModalOpen}
+        title="Filtros"
+        onClose={() => setIsListFilterModalOpen(false)}
+      >
+        <form
+          className={styles.listFilterForm}
+          onSubmit={(event) => {
+            event.preventDefault()
+            handleApplyListFilter()
+          }}
+        >
+          <div className={styles.listFilterAmountGrid}>
+            <label className={styles.createField}>
+              <span>Ano</span>
+              <select
+                value={draftCombinedFilter.selectedYear}
+                onChange={(event) =>
+                  setDraftCombinedFilter((prev) => ({
+                    ...prev,
+                    selectedYear: event.target.value,
+                    selectedDay: 'all'
+                  }))
+                }
+              >
+                <option value="all">Todos os anos</option>
+                {yearOptions
+                  .filter((year) => year !== 'all')
+                  .map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+              </select>
+            </label>
+
+            <label className={styles.createField}>
+              <span>Mes</span>
+              <select
+                value={draftCombinedFilter.selectedMonth}
+                onChange={(event) =>
+                  setDraftCombinedFilter((prev) => ({
+                    ...prev,
+                    selectedMonth: event.target.value,
+                    selectedDay: 'all'
+                  }))
+                }
+              >
+                {Object.entries(MONTH_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className={styles.createField}>
+              <span>Dia</span>
+              <select
+                value={draftCombinedFilter.selectedDay}
+                onChange={(event) =>
+                  setDraftCombinedFilter((prev) => ({
+                    ...prev,
+                    selectedDay: event.target.value
+                  }))
+                }
+              >
+                <option value="all">Todos os dias</option>
+                {combinedFilterDayOptions
+                  .filter((day) => day !== 'all')
+                  .map((day) => (
+                    <option key={day} value={day}>
+                      {day}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          </div>
+
+          <label className={styles.createField}>
+            <span>Tipo de operacao</span>
+            <select
+              value={draftCombinedFilter.operationType}
+              onChange={(event) =>
+                setDraftCombinedFilter((prev) => ({
+                  ...prev,
+                  operationType: event.target.value as ListFilterState['operationType']
+                }))
+              }
+            >
+              <option value="all">Todos</option>
+              <option value="entrada">Entrada</option>
+              <option value="saida">Saida</option>
+            </select>
+          </label>
+
+          <div className={styles.valueRangeField}>
+            <div className={styles.valueRangeHeader}>
+              <span>Faixa de valor</span>
+              <strong>
+                {formatCurrency(0)} ate{' '}
+                {formatCurrency(
+                  draftCombinedFilter.maxAmountLimit.trim() === ''
+                    ? amountRangeMax
+                    : Number(draftCombinedFilter.maxAmountLimit)
+                )}
+              </strong>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max={String(amountRangeMax)}
+              step="10"
+              value={
+                draftCombinedFilter.maxAmountLimit.trim() === ''
+                  ? String(amountRangeMax)
+                  : draftCombinedFilter.maxAmountLimit
+              }
+              onChange={(event) =>
+                setDraftCombinedFilter((prev) => ({
+                  ...prev,
+                  maxAmountLimit: event.target.value
+                }))
+              }
+            />
+            <div className={styles.valueRangeScale}>
+              <span>{formatCurrency(0)}</span>
+              <span>{formatCurrency(amountRangeMax)}</span>
+            </div>
+          </div>
+
+          <div className={styles.createActions}>
+            <Button type="button" variant="ghost" onClick={handleClearListFilter}>
+              Limpar
+            </Button>
+            <Button type="submit">Aplicar filtros</Button>
+          </div>
+        </form>
+      </ModalBase>
 
       <ModalBase
         open={deleteCandidate !== null}
@@ -1404,3 +1679,4 @@ export const Report = (): JSX.Element => {
     </PageTemplate>
   )
 }
+
